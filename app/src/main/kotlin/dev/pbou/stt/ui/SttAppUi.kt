@@ -30,6 +30,8 @@ import androidx.navigation.compose.rememberNavController
 import dev.pbou.stt.AppGraph
 import dev.pbou.stt.R
 import dev.pbou.stt.data.DownloadState
+import dev.pbou.stt.ui.bench.BenchScreen
+import dev.pbou.stt.ui.bench.BenchViewModel
 import dev.pbou.stt.ui.dictate.DictateScreen
 import dev.pbou.stt.ui.dictate.DictateViewModel
 import dev.pbou.stt.ui.models.ModelsScreen
@@ -45,6 +47,7 @@ private enum class Tab(val route: String, @StringRes val label: Int, @DrawableRe
 }
 
 private const val LICENSES = "licenses"
+private const val BENCH = "bench"
 
 @Composable
 fun SttAppUi(graph: AppGraph) {
@@ -93,10 +96,13 @@ fun SttAppUi(graph: AppGraph) {
                 DictateScreen(viewModel { DictateViewModel(graph) }, onManageModels = { go(Tab.MODELS) })
             }
             composable(Tab.MODELS.route) {
-                ModelsScreen(viewModel { ModelsViewModel(graph) })
+                ModelsScreen(viewModel { ModelsViewModel(graph) }, onBenchmark = { nav.navigate(BENCH) })
             }
             composable(Tab.SETTINGS.route) {
-                SettingsScreen(viewModel { SettingsViewModel(graph) }, onLicenses = { nav.navigate(LICENSES) })
+                SettingsScreen(viewModel { SettingsViewModel(graph) }, onLicenses = { nav.navigate(LICENSES) }, onBenchmark = { nav.navigate(BENCH) })
+            }
+            composable(BENCH) {
+                BenchScreen(viewModel { BenchViewModel(graph) }, onBack = { nav.popBackStack() })
             }
             composable(LICENSES) {
                 LicensesScreen(onBack = { nav.popBackStack() })

@@ -1,14 +1,7 @@
 package dev.pbou.stt.engine
 
-import android.annotation.SuppressLint
 import android.content.res.AssetManager
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.os.SystemClock
-import com.k2fsa.sherpa.onnx.SileroVadModelConfig
-import com.k2fsa.sherpa.onnx.Vad
-import com.k2fsa.sherpa.onnx.VadModelConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,9 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.log10
 import kotlin.math.max
-import kotlin.math.sqrt
 
 /**
  * Live dictation with an offline model ("simulated streaming"):
@@ -118,27 +109,14 @@ class LiveTranscriber(private val assets: AssetManager, private val host: Engine
 
     fun dismissProblem() = _state.update { it.copy(problem = null) }
 
-    @SuppressLint("MissingPermission") // the caller asks for RECORD_AUDIO; a SecurityException is handled
     private suspend fun capture(config: Config, queue: DecodeQueue) = withContext(Dispatchers.IO) {
-        val vad = Vad(
-            assets,
-            VadModelConfig(
-                sileroVadModelConfig = SileroVadModelConfig(
-                    model = "vad/silero_vad.onnx", threshold = 0.5f, minSilenceDuration = config.pauseSeconds,
-                    minSpeechDuration = 0.25f, windowSize = CHUNK, maxSpeechDuration = MAX_UTTERANCE_S,
-                ),
-                sampleRate = SAMPLE_RATE, numThreads = 1,
-            ),
-        )
-        val minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        val rec = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_RECOGNITION, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT, max(minBuffer, SAMPLE_RATE * 2),
-        )
+        val vad = Mic.vad(assets, config.pauseSeconds, MAX_UTTERANCE_S)
+        val rec = try {
+            Mic.open()
+        } catch (t: Throwable) {
+            vad.release(); throw t
+        }
         try {
-            if (rec.state != AudioRecord.STATE_INITIALIZED) throw MicrophoneException()
-            rec.startRecording()
-            if (rec.recordingState != AudioRecord.RECORDSTATE_RECORDING) throw MicrophoneException()
             _state.update { it.copy(phase = Phase.LISTENING) }
 
             val chunk = ShortArray(CHUNK)
@@ -147,11 +125,8 @@ class LiveTranscriber(private val assets: AssetManager, private val host: Engine
             var lastPartial = 0L
             var level = 0f
             while (recording && isActive) {
-                val n = rec.read(chunk, 0, chunk.size)
-                if (n < 0) throw MicrophoneException()
-                if (n == 0) continue
-                val samples = FloatArray(n) { chunk[it] / 32768f }
-                level = max(loudness(samples), level * 0.85f)
+                val samples = Mic.read(rec, chunk) ?: continue
+                level = max(Mic.loudness(samples), level * 0.85f)
                 _level.value = level
 
                 vad.acceptWaveform(samples)
@@ -255,10 +230,8 @@ class LiveTranscriber(private val assets: AssetManager, private val host: Engine
         }
     }
 
-    private class MicrophoneException : Exception()
-
     private companion object {
-        const val CHUNK = 512                 // 32 ms, the Silero VAD window
+        const val CHUNK = Mic.CHUNK
         const val PRE_ROLL_CHUNKS = 10        // about 0.3 s
         const val PARTIAL_INTERVAL_MS = 500L
         const val MAX_UTTERANCE_S = 20f
@@ -268,15 +241,6 @@ class LiveTranscriber(private val assets: AssetManager, private val host: Engine
             var i = 0
             for (p in parts) { p.copyInto(out, i); i += p.size }
             return out
-        }
-
-        /** RMS loudness mapped from about -55 dBFS (silence) to -10 dBFS (loud) onto [0, 1]. */
-        fun loudness(samples: FloatArray): Float {
-            var sum = 0.0
-            for (s in samples) sum += s * s
-            val rms = sqrt(sum / samples.size)
-            val db = 20 * log10(rms + 1e-9)
-            return ((db + 55) / 45).toFloat().coerceIn(0f, 1f)
         }
     }
 }

@@ -66,7 +66,7 @@
     </plurals>
     <string name="language_auto">Detect automatically</string>
     <string name="language_auto_short">Auto</string>
-    <string name="language_note_auto">%1$s detects the language by itself.</string>
+    <string name="language_note_auto">%1$s detects the language by itself, sentence by sentence. Other models let you choose it.</string>
     <string name="language_note_detects">%1$s will detect the language.</string>
     <string name="language_note_fallback">%1$s does not detect the language: it will use %2$s.</string>
 
@@ -77,7 +77,6 @@
     <string name="storage_summary">Models use %1$s · %2$s free on this phone</string>
     <string name="badge_in_use">In use</string>
     <string name="badge_recommended">Recommended</string>
-    <string name="badge_too_slow">Too slow for live dictation</string>
     <string name="model_in_use_note">Used for dictation</string>
     <string name="model_facts">%1$s · %2$s · %3$s on the phone</string>
     <string name="fact_punctuation">Punctuation</string>
@@ -155,4 +154,52 @@
     <string name="licenses_models_note">Speech models are made by their authors and converted to run on phones by the sherpa-onnx project.</string>
     <string name="licenses_models">Speech models</string>
     <string name="licenses_software">Software</string>
+
+    <!-- Benchmark -->
+    <string name="bench_title">Benchmark</string>
+    <string name="bench_open">Benchmark on your voice</string>
+    <string name="bench_open_summary">Read six sentences, then compare the models on this phone.</string>
+    <string name="bench_intro">Read the sentences aloud, then see how each model does with your voice on this phone. The recordings stay on the phone.</string>
+    <string name="bench_sentences_in">Sentences in</string>
+    <string name="bench_step_record">1. Record</string>
+    <string name="bench_step_compare">2. Compare</string>
+    <string name="bench_results">Results</string>
+    <string name="bench_hint_recording">Read the sentence, then pause: recording stops by itself.</string>
+    <string name="bench_hint_next">Next sentence…</string>
+    <string name="bench_recorded">Recorded · %1$s s</string>
+    <string name="bench_not_recorded">Not recorded</string>
+    <string name="bench_nothing_heard">Nothing was heard. Tap the microphone, then read the sentence.</string>
+    <string name="cd_record_sentence">Record sentence %1$d</string>
+    <string name="cd_stop_recording">Stop recording</string>
+    <string name="bench_need_recording">Record at least one sentence first.</string>
+    <string name="bench_models_note">Each model is loaded and tested in turn. With large models this takes a few minutes; the screen stays on meanwhile.</string>
+    <plurals name="bench_run">
+        <item quantity="one">Test %d model</item>
+        <item quantity="other">Test %d models</item>
+    </plurals>
+    <string name="bench_cancel">Stop</string>
+    <string name="bench_progress_loading">%1$s: loading</string>
+    <string name="bench_progress">%1$s: sentence %2$d of %3$d</string>
+    <string name="bench_progress_models">Model %1$d of %2$d</string>
+    <string name="bench_no_results">No results yet for these sentences.</string>
+    <string name="bench_word_errors">Word errors</string>
+    <string name="bench_wait">Wait after a sentence</string>
+    <string name="bench_speed">Speed</string>
+    <string name="bench_load">Loading time</string>
+    <string name="bench_percent">%1$s %%</string>
+    <string name="bench_seconds">%1$s s</string>
+    <string name="bench_factor">%1$s× faster than real time</string>
+    <string name="bench_slower">Slower than real time</string>
+    <string name="bench_show_transcripts">Show transcripts</string>
+    <string name="bench_hide_transcripts">Hide transcripts</string>
+    <plurals name="bench_sentence_errors">
+        <item quantity="one">%d error</item>
+        <item quantity="other">%d errors</item>
+    </plurals>
+    <string name="bench_empty_transcript">(nothing)</string>
+    <string name="bench_result_meta">%1$s · %2$d cores</string>
+    <string name="bench_language_forced">Told to use %1$s</string>
+    <string name="bench_failed">%1$s could not finish: %2$s</string>
+    <string name="wait_estimate">About %1$s s wait after each sentence</string>
+    <string name="wait_measured">On your voice: %1$s %% word errors · %2$s s wait after each sentence</string>
 </resources>

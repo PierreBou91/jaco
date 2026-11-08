@@ -3,8 +3,11 @@ package dev.pbou.stt
 import android.app.Application
 import android.os.LocaleList
 import dev.pbou.stt.data.AppSettings
+import dev.pbou.stt.data.BenchStore
 import dev.pbou.stt.data.Downloads
 import dev.pbou.stt.data.SettingsRepository
+import dev.pbou.stt.engine.Benchmark
+import dev.pbou.stt.engine.ClipRecorder
 import dev.pbou.stt.engine.EngineHost
 import dev.pbou.stt.engine.EngineOptions
 import dev.pbou.stt.engine.HttpFetcher
@@ -44,11 +47,18 @@ class AppGraph(app: Application) {
     val live = LiveTranscriber(app.assets, host)
     val settingsRepo = SettingsRepository(app)
     val downloads = Downloads(app, store)
+    val bench = BenchStore(File(app.filesDir, "bench"))
+    val clipRecorder = ClipRecorder(app.assets)
+    val benchmark = Benchmark(host)
 
     /** Null until the settings are read from disk (a few milliseconds after start). */
     val settings: StateFlow<AppSettings?> = settingsRepo.settings.stateIn(scope, SharingStarted.Eagerly, null)
 
     /** The model dictation uses: the chosen one if installed, else the first installed one. */
+    init {
+        scope.launch { bench.load() } // the Models screen shows measured results too
+    }
+
     val activeModel: StateFlow<ModelSpec?> = combine(settings, store.installed) { s, installed ->
         val chosen = ModelCatalog.byId(s?.defaultModelId)?.takeIf { it.id in installed }
         chosen ?: ModelCatalog.all.firstOrNull { it.id in installed }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pbou.stt.AppGraph
 import dev.pbou.stt.data.DownloadState
+import dev.pbou.stt.engine.Benchmark
 import dev.pbou.stt.engine.EngineHost
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.ModelSpec
@@ -23,6 +24,8 @@ data class ModelItem(
     val download: DownloadState?,
     /** Bytes kept from a paused download (resumable), when no download is running. */
     val pausedBytes: Long,
+    /** The latest benchmark of this model on the user's voice, if any. */
+    val measured: Benchmark.Result? = null,
 )
 
 data class Disk(val used: Long = 0, val free: Long = 0)
@@ -42,8 +45,8 @@ class ModelsViewModel(private val graph: AppGraph) : ViewModel() {
 
     val ui: StateFlow<ModelsUi> = combine(
         combine(graph.store.installed, graph.activeModel, graph.downloads.states, ::Triple),
-        graph.settings, graph.downloads.onWifi, disk, paused,
-    ) { (installed, active, downloads), settings, onWifi, disk, paused ->
+        graph.settings, graph.downloads.onWifi, disk, combine(paused, graph.bench.results, ::Pair),
+    ) { (installed, active, downloads), settings, onWifi, disk, (paused, measured) ->
         val items = ModelCatalog.all.map { spec ->
             ModelItem(
                 spec = spec,
@@ -51,6 +54,7 @@ class ModelsViewModel(private val graph: AppGraph) : ViewModel() {
                 active = spec.id == active?.id,
                 download = downloads[spec.id],
                 pausedBytes = if (downloads[spec.id] == null) paused[spec.id] ?: 0 else 0,
+                measured = measured.filter { it.modelId == spec.id }.maxByOrNull { it.finishedAt },
             )
         }
         ModelsUi(

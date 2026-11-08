@@ -75,9 +75,29 @@ object ModelInfo {
         else -> R.string.speed_1
     }
 
-    /** Live dictation re-reads the sentence twice a second: beyond this it falls behind. */
-    fun tooSlowForLive(spec: ModelSpec) = (spec.bench?.phoneRtf ?: 0.0) > 0.5
+    /** Length of a typical dictated sentence, for the wait estimate. */
+    private const val TYPICAL_SENTENCE_MS = 6_000
+
+    /**
+     * When you pause, live dictation transcribes the whole sentence once more: the text appears after
+     * that decode. Estimated from the benchmark's real-time factor for a typical sentence.
+     */
+    fun estimatedWaitMs(b: Bench): Long = (b.phoneRtf * TYPICAL_SENTENCE_MS).roundToLong()
+
+    /** Beyond this wait, dictation feels sluggish: the estimate is shown as a warning. */
+    const val LONG_WAIT_MS = 2_000L
 }
+
+/** "11" or "1.4" (times faster than real time), or null when slower than real time. */
+fun speedFactor(rtf: Double): String? {
+    if (rtf <= 0 || rtf >= 1.0) return null
+    val factor = 1 / rtf
+    // "11×", but "1.4×" rather than a misleading "1×" for slow models.
+    return if (factor >= 10) factor.roundToLong().toString() else Format.decimal(factor)
+}
+
+/** Milliseconds as seconds with one decimal ("0.4"). */
+fun seconds(ms: Long): String = Format.decimal(ms / 1000.0)
 
 @Composable
 fun languagesText(spec: ModelSpec): String {
@@ -101,12 +121,8 @@ fun endonym(code: String): String {
 @Composable
 fun benchDetail(b: Bench): String {
     val wer = Format.decimal(b.werPercent)
-    return if (b.phoneRtf >= 1.0) stringResource(R.string.bench_detail_slow, wer)
-    else {
-        // "11×", but "1.4×" rather than a misleading "1×" for slow models.
-        val factor = 1 / b.phoneRtf
-        stringResource(R.string.bench_detail, wer, if (factor >= 10) factor.roundToLong().toString() else Format.decimal(factor))
-    }
+    val factor = speedFactor(b.phoneRtf)
+    return if (factor == null) stringResource(R.string.bench_detail_slow, wer) else stringResource(R.string.bench_detail, wer, factor)
 }
 
 @Composable

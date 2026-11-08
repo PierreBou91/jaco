@@ -81,7 +81,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
 }
 
 @Composable
-fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit) {
+fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: () -> Unit) {
     val s = vm.settings.collectAsStateWithLifecycle().value ?: return
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     var languageDialog by rememberSaveable { mutableStateOf(false) }
@@ -142,10 +142,18 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit) {
 
             item { SectionHeader(stringResource(R.string.settings_lab)) }
             item {
+                Item(
+                    title = stringResource(R.string.bench_open),
+                    summary = stringResource(R.string.bench_open_summary),
+                    icon = R.drawable.ic_speed,
+                    onClick = onBenchmark,
+                )
+            }
+            item {
                 SwitchItem(
                     title = stringResource(R.string.setting_timings),
                     summary = stringResource(R.string.setting_timings_summary),
-                    icon = R.drawable.ic_speed,
+                    icon = R.drawable.ic_timer,
                     checked = s.showTimings,
                 ) { v -> vm.update { it.copy(showTimings = v) } }
             }

@@ -48,7 +48,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pbou.stt.R
 import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.ui.ModelInfo
+import dev.pbou.stt.data.Format
 import dev.pbou.stt.ui.benchDetail
+import dev.pbou.stt.ui.seconds
 import dev.pbou.stt.ui.bytes
 import dev.pbou.stt.ui.components.Badge
 import dev.pbou.stt.ui.components.DownloadStatus
@@ -59,7 +61,7 @@ import dev.pbou.stt.ui.rememberNotificationPermission
 import dev.pbou.stt.ui.theme.LocalExtraColors
 
 @Composable
-fun ModelsScreen(vm: ModelsViewModel) {
+fun ModelsScreen(vm: ModelsViewModel, onBenchmark: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     var toDelete by remember { mutableStateOf<ModelSpec?>(null) }
@@ -71,6 +73,13 @@ fun ModelsScreen(vm: ModelsViewModel) {
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.nav_models)) },
+                actions = {
+                    if (ui.installed.isNotEmpty()) {
+                        IconButton(onClick = onBenchmark) {
+                            Icon(painterResource(R.drawable.ic_speed), contentDescription = stringResource(R.string.bench_open))
+                        }
+                    }
+                },
                 scrollBehavior = scroll,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -145,7 +154,6 @@ private fun StorageSummary(disk: Disk) {
 @Composable
 private fun ModelCard(item: ModelItem, ui: ModelsUi, actions: CardActions) {
     val spec = item.spec
-    val extra = LocalExtraColors.current
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
@@ -159,16 +167,13 @@ private fun ModelCard(item: ModelItem, ui: ModelsUi, actions: CardActions) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (spec.recommended || item.active || ModelInfo.tooSlowForLive(spec)) {
+            if (spec.recommended || item.active) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (item.active) {
                         Badge(stringResource(R.string.badge_in_use), MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, R.drawable.ic_check)
                     }
                     if (spec.recommended) {
                         Badge(stringResource(R.string.badge_recommended), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, R.drawable.ic_star_fill)
-                    }
-                    if (ModelInfo.tooSlowForLive(spec)) {
-                        Badge(stringResource(R.string.badge_too_slow), extra.warningContainer, extra.onWarningContainer, R.drawable.ic_timer)
                     }
                 }
             }
@@ -177,6 +182,7 @@ private fun ModelCard(item: ModelItem, ui: ModelsUi, actions: CardActions) {
                 Ratings(ModelInfo.accuracy(b), ModelInfo.speed(b))
                 Text(benchDetail(b), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            WaitLine(item)
             Text(
                 stringResource(
                     R.string.model_facts,
@@ -190,6 +196,26 @@ private fun ModelCard(item: ModelItem, ui: ModelsUi, actions: CardActions) {
             Spacer(Modifier.height(2.dp))
             CardFooter(item, ui, actions)
         }
+    }
+}
+
+/** How long the text takes to appear after each pause: measured on the user's voice if possible, else estimated. */
+@Composable
+private fun WaitLine(item: ModelItem) {
+    val measured = item.measured
+    val bench = item.spec.bench
+    val waitMs = measured?.waitMs ?: bench?.let(ModelInfo::estimatedWaitMs) ?: return
+    val text = if (measured != null) {
+        stringResource(R.string.wait_measured, Format.decimal(measured.score.percent), seconds(measured.waitMs))
+    } else {
+        stringResource(R.string.wait_estimate, seconds(waitMs))
+    }
+    val long = waitMs > ModelInfo.LONG_WAIT_MS
+    val color = if (long) LocalExtraColors.current.warning else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(if (measured != null) R.drawable.ic_speed else R.drawable.ic_timer), contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
 

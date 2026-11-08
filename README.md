@@ -7,7 +7,7 @@ Offline speech-to-text for Android. Speech recognition runs entirely on the phon
 Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch `spike/01-ocr-local`,
 `spikes/03-stt/HISTORY.md` has the benchmark).
 
-## What it does today (M0)
+## What it does today (M0, part of M1)
 
 - **Live dictation**: Silero VAD cuts speech at pauses; the current sentence is re-transcribed about twice a
   second as a preview, then finalised. Copy, share, clear with undo.
@@ -15,6 +15,9 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   Cohere Transcribe), with accuracy and speed measured on a Honor 90, and a spoken-language setting.
 - **Model manager**: download (resumable, checksum-verified, Wi-Fi only by default, keeps running in the
   background with a notification), pause, resume, delete, pick the one used for dictation.
+- **Benchmark** (M1): read six sentences (French or English) once; every installed model then transcribes
+  them on the phone. Shows word errors, the wait after each sentence, speed and load time, with the
+  transcripts. Model cards show your measured result, or an estimated wait from the reference benchmark.
 - **Settings**: language, end-of-sentence pause, live preview, CPU threads, keep the model in memory, timings.
 - Dark theme with an orange accent, Inter font, English and French UI.
 
@@ -51,7 +54,7 @@ models from `~/models/stt` into the app.
 
 ## Roadmap
 
-- **M1, the lab**: transcribe a shared audio file or voice note, benchmark screen (your voice, WER, speed).
+- **M1, the lab**: transcribe a shared audio file or voice note. (The benchmark screen is done.)
 - **M2, the keyboard**: a dictation keyboard on the same engine.
 - **M3, the recorder**: long background recordings, timestamps, playback, history, search, export.
 - **M4, speakers**: diarization (who spoke when) on recordings.

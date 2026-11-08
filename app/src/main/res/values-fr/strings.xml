@@ -61,7 +61,7 @@
     </plurals>
     <string name="language_auto">Détection automatique</string>
     <string name="language_auto_short">Auto</string>
-    <string name="language_note_auto">%1$s détecte la langue tout seul.</string>
+    <string name="language_note_auto">%1$s détecte la langue tout seul, phrase par phrase. D\'autres modèles permettent de la choisir.</string>
     <string name="language_note_detects">%1$s va détecter la langue.</string>
     <string name="language_note_fallback">%1$s ne détecte pas la langue. Langue utilisée\u00A0: %2$s.</string>
 
@@ -71,7 +71,6 @@
     <string name="storage_summary">Les modèles occupent %1$s · %2$s libres sur ce téléphone</string>
     <string name="badge_in_use">Utilisé</string>
     <string name="badge_recommended">Recommandé</string>
-    <string name="badge_too_slow">Trop lent pour la dictée en direct</string>
     <string name="model_in_use_note">Utilisé pour la dictée</string>
     <string name="model_facts">%1$s · %2$s · %3$s sur le téléphone</string>
     <string name="fact_punctuation">Ponctuation</string>
@@ -147,4 +146,52 @@
     <string name="licenses_models_note">Les modèles de reconnaissance sont créés par leurs auteurs et adaptés aux téléphones par le projet sherpa-onnx.</string>
     <string name="licenses_models">Modèles de reconnaissance</string>
     <string name="licenses_software">Logiciels</string>
+
+    <!-- Benchmark -->
+    <string name="bench_title">Banc d\'essai</string>
+    <string name="bench_open">Banc d\'essai sur votre voix</string>
+    <string name="bench_open_summary">Lisez six phrases, puis comparez les modèles sur ce téléphone.</string>
+    <string name="bench_intro">Lisez les phrases à voix haute, puis voyez comment chaque modèle s\'en sort avec votre voix sur ce téléphone. Les enregistrements restent sur le téléphone.</string>
+    <string name="bench_sentences_in">Phrases en</string>
+    <string name="bench_step_record">1. Enregistrer</string>
+    <string name="bench_step_compare">2. Comparer</string>
+    <string name="bench_results">Résultats</string>
+    <string name="bench_hint_recording">Lisez la phrase, puis marquez une pause : l\'enregistrement s\'arrête tout seul.</string>
+    <string name="bench_hint_next">Phrase suivante…</string>
+    <string name="bench_recorded">Enregistrée · %1$s s</string>
+    <string name="bench_not_recorded">Pas encore enregistrée</string>
+    <string name="bench_nothing_heard">Aucune voix entendue. Touchez le micro, puis lisez la phrase.</string>
+    <string name="cd_record_sentence">Enregistrer la phrase %1$d</string>
+    <string name="cd_stop_recording">Arrêter l\'enregistrement</string>
+    <string name="bench_need_recording">Enregistrez d\'abord au moins une phrase.</string>
+    <string name="bench_models_note">Chaque modèle est chargé et testé à son tour. Avec les gros modèles, cela prend quelques minutes ; l\'écran reste allumé pendant ce temps.</string>
+    <plurals name="bench_run">
+        <item quantity="one">Tester %d modèle</item>
+        <item quantity="other">Tester %d modèles</item>
+    </plurals>
+    <string name="bench_cancel">Arrêter</string>
+    <string name="bench_progress_loading">%1$s : chargement</string>
+    <string name="bench_progress">%1$s : phrase %2$d sur %3$d</string>
+    <string name="bench_progress_models">Modèle %1$d sur %2$d</string>
+    <string name="bench_no_results">Pas encore de résultats pour ces phrases.</string>
+    <string name="bench_word_errors">Mots erronés</string>
+    <string name="bench_wait">Attente après une phrase</string>
+    <string name="bench_speed">Vitesse</string>
+    <string name="bench_load">Temps de chargement</string>
+    <string name="bench_percent">%1$s %%</string>
+    <string name="bench_seconds">%1$s s</string>
+    <string name="bench_factor">%1$s× plus rapide que le temps réel</string>
+    <string name="bench_slower">Plus lent que le temps réel</string>
+    <string name="bench_show_transcripts">Voir les transcriptions</string>
+    <string name="bench_hide_transcripts">Masquer les transcriptions</string>
+    <plurals name="bench_sentence_errors">
+        <item quantity="one">%d erreur</item>
+        <item quantity="other">%d erreurs</item>
+    </plurals>
+    <string name="bench_empty_transcript">(rien)</string>
+    <string name="bench_result_meta">%1$s · %2$d cœurs</string>
+    <string name="bench_language_forced">Langue imposée : %1$s</string>
+    <string name="bench_failed">%1$s n\'a pas pu terminer : %2$s</string>
+    <string name="wait_estimate">Environ %1$s s d\'attente après chaque phrase</string>
+    <string name="wait_measured">Sur votre voix : %1$s %% de mots erronés · %2$s s d\'attente après chaque phrase</string>
 </resources>

@@ -542,17 +542,22 @@ private fun ModelSheet(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
-            FlowRow(
-                Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AppSettings.LANGUAGES.forEach { code ->
-                    FilterChip(
-                        selected = code == ui.settings.language,
-                        onClick = { onSelectLanguage(code) },
-                        label = { Text(if (code == ModelSpec.AUTO) stringResource(R.string.language_auto_short) else endonym(code)) },
-                    )
+            // Models that detect the language by themselves ignore the choice: only the note is shown for them.
+            if (ui.model?.languages !is Languages.Auto) {
+                FlowRow(
+                    Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    AppSettings.LANGUAGES.forEach { code ->
+                        FilterChip(
+                            selected = code == ui.settings.language,
+                            onClick = { onSelectLanguage(code) },
+                            label = { Text(if (code == ModelSpec.AUTO) stringResource(R.string.language_auto_short) else endonym(code)) },
+                        )
+                    }
                 }
+            } else {
+                Spacer(Modifier.height(6.dp))
             }
             ui.model?.let { LanguageNote(it, ui) }
 

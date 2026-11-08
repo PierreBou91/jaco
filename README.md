@@ -59,6 +59,18 @@ models from `~/models/stt` into the app.
 
 ## Licences
 
-Models keep their own licences (CC-BY-4.0, MIT, Apache 2.0), listed in the app under Settings, Open-source
-licences. Inter is under the SIL Open Font License (`third_party/licenses/Inter-OFL.txt`), Material Symbols
-and sherpa-onnx under Apache 2.0, Silero VAD under MIT.
+The code of this repository is under the [Zero-Clause BSD licence](LICENSE) (0BSD): do anything with it, no
+conditions.
+
+Third-party files committed here keep their own licences (texts in `third_party/licenses/`):
+
+| Files | Origin | Licence |
+|---|---|---|
+| `engine/src/main/assets/vad/silero_vad.onnx` | Silero VAD, Silero Team | MIT (`Silero-VAD-MIT.txt`) |
+| `app/src/main/res/font/inter_*.ttf` | Inter, Rasmus Andersson | SIL Open Font License 1.1 (`Inter-OFL.txt`) |
+| `app/src/main/res/drawable/ic_*.xml` (except `ic_launcher_*`) | Material Symbols, Google | Apache 2.0 (`Apache-2.0.txt`) |
+| `gradlew`, `gradlew.bat`, `gradle/wrapper/` | Gradle | Apache 2.0 |
+
+Dependencies fetched at build time (sherpa-onnx, AndroidX, Kotlin coroutines, Apache Commons Compress) are under
+Apache 2.0, ONNX Runtime (inside sherpa-onnx) under MIT. Models are not in this repository; each keeps its own
+licence (CC-BY-4.0, MIT or Apache 2.0), listed in the app under Settings, Open-source licences.

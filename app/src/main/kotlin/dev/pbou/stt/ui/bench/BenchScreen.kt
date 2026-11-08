@@ -182,7 +182,7 @@ fun BenchScreen(vm: BenchViewModel, onBack: () -> Unit) {
             }
 
             item { SectionHeader(stringResource(R.string.bench_step_compare)) }
-            items(ui.installed, key = { it.id }) { spec ->
+            items(ui.installed, key = { "model:${it.id}" }) { spec ->
                 val checked = spec.id in ui.selected
                 Row(
                     Modifier
@@ -209,7 +209,7 @@ fun BenchScreen(vm: BenchViewModel, onBack: () -> Unit) {
                     )
                 }
             }
-            items(ui.results, key = { it.modelId }) { ResultCard(it) }
+            items(ui.results, key = { "result:${it.modelId}" }) { ResultCard(it) }
         }
     }
 }

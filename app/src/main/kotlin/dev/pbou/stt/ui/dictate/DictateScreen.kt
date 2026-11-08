@@ -66,6 +66,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -150,6 +151,8 @@ fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit) {
     // Keep the model warm while this screen is visible; never listen in the background.
     LaunchedEffect(ui.model, ui.options, ui.settings.keepLoaded) { vm.warmUp() }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { vm.stop() }
+    // Leaving the tab stops listening too: the microphone is never on without the screen that shows it.
+    DisposableEffect(Unit) { onDispose { vm.stop() } }
 
     // Problems reported by the transcriber.
     val micBusy = stringResource(R.string.mic_unavailable)

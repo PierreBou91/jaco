@@ -102,7 +102,11 @@ fun endonym(code: String): String {
 fun benchDetail(b: Bench): String {
     val wer = Format.decimal(b.werPercent)
     return if (b.phoneRtf >= 1.0) stringResource(R.string.bench_detail_slow, wer)
-    else stringResource(R.string.bench_detail, wer, (1 / b.phoneRtf).roundToLong().toString())
+    else {
+        // "11×", but "1.4×" rather than a misleading "1×" for slow models.
+        val factor = 1 / b.phoneRtf
+        stringResource(R.string.bench_detail, wer, if (factor >= 10) factor.roundToLong().toString() else Format.decimal(factor))
+    }
 }
 
 @Composable

@@ -6,7 +6,8 @@ import java.text.NumberFormat
 
 object Format {
     /** "487 MB" in English, "487 Mo" in French. */
-    fun bytes(context: Context, bytes: Long): String = Formatter.formatShortFileSize(context, bytes)
+    fun bytes(context: Context, bytes: Long): String =
+        Formatter.formatShortFileSize(context, bytes).replace(' ', '\u00A0') // never "670" / "MB" on two lines
 
     /** One decimal, in the user's locale ("7.0" / "7,0"). */
     fun decimal(value: Double): String = NumberFormat.getNumberInstance().apply {

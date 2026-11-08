@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Recordings go on with the screen off or in another app. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <!-- Optional, never granted by installing: given once from a computer
          (adb shell pm grant dev.pbou.stt android.permission.WRITE_SECURE_SETTINGS), it lets the
          Control Centre button switch keyboards in one tap instead of opening the keyboard list. -->
@@ -98,6 +100,22 @@
             android:exported="false"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <service
+            android:name=".data.RecorderService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Shares exported transcripts and audio with other apps. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/shared_paths" />
+        </provider>
 
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

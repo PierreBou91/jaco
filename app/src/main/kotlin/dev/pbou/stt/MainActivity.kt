@@ -32,14 +32,22 @@ class MainActivity : ComponentActivity() {
         handle(intent)
     }
 
-    /** A file shared to the app ("Share" or "Open with"): transcribe it. */
+    /** A file shared to the app ("Share" or "Open with"): transcribe it. From a notification: show its item. */
     private fun handle(intent: Intent?) {
+        intent?.getStringExtra(EXTRA_ITEM)?.let { id ->
+            (application as SttApplication).graph.showItem.trySend(id)
+            return
+        }
         val uri = when (intent?.action) {
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
             Intent.ACTION_VIEW -> intent.data
             else -> null
         } ?: return
         (application as SttApplication).graph.openFile(uri)
+    }
+
+    companion object {
+        const val EXTRA_ITEM = "dev.pbou.stt.ITEM"
     }
 
     override fun onResume() {

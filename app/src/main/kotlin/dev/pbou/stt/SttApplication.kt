@@ -7,6 +7,10 @@ import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.BenchStore
 import dev.pbou.stt.data.Downloads
 import dev.pbou.stt.data.FileJob
+import dev.pbou.stt.data.Improver
+import dev.pbou.stt.data.Library
+import dev.pbou.stt.data.LibraryItem
+import dev.pbou.stt.data.Recorder
 import dev.pbou.stt.data.SettingsRepository
 import dev.pbou.stt.engine.Benchmark
 import dev.pbou.stt.engine.ClipRecorder
@@ -20,6 +24,7 @@ import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.ModelInstaller
 import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.engine.ModelStore
+import dev.pbou.stt.engine.RecordingSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -59,8 +64,12 @@ class AppGraph(app: Application) {
     val bench = BenchStore(File(app.filesDir, "bench"))
     val clipRecorder = ClipRecorder(app.assets)
     val benchmark = Benchmark(host)
+    val fileTranscriber = FileTranscriber(app.assets, host)
+    val library = Library(File(app.filesDir, "library"))
+    val improver = Improver(app, library)
+    val recorder = Recorder(app, scope, library, RecordingSession(app.assets, host), onSaved = ::autoImprove)
     val files = FileJob(
-        app, scope, FileTranscriber(app.assets, host),
+        app, scope, fileTranscriber,
         defaultModel = { fileModel(settings.filterNotNull().first()) },
         defaultLanguage = { spec -> settings.filterNotNull().first().let { s -> spec?.let(s::languageFor) ?: s.language } },
         optionsFor = { spec, language ->
@@ -70,7 +79,39 @@ class AppGraph(app: Application) {
             options(spec, s, wanted)
         },
         stopDictation = { live.stop() },
+        library = library,
+        keepAudio = { awaitSettings().keepAudio },
+        awaitNoRecording = { onWait ->
+            if (recorder.isActive) {
+                onWait()
+                recorder.itemId.first { it == null }
+            }
+        },
     )
+
+    /** Asks the UI to show a library item (from the recording notification). */
+    val showItem = Channel<String>(Channel.CONFLATED)
+
+    suspend fun awaitSettings(): AppSettings = settings.filterNotNull().first()
+
+    /** Something is using the engine for the user right now: background work must wait. */
+    fun engineBusy(): Boolean =
+        recorder.isActive || live.isRunning || keyboardLive.isRunning || files.state.value?.busy == true
+
+    /** Starts a recording with the dictation model; returns its library id, or null if no model is installed. */
+    suspend fun startRecording(): String? {
+        val s = awaitSettings()
+        val spec = dictationModel(s) ?: return null
+        return recorder.start(spec, options(spec, s), s.keepAudio)
+    }
+
+    /** A recording was saved with its audio: queue a better transcription if the settings ask for one. */
+    private suspend fun autoImprove(item: LibraryItem) {
+        val s = awaitSettings()
+        val model = s.improveModelId?.takeIf { it in store.installed.value } ?: return
+        if (!s.keepAudio || item.audio == null || item.transcript?.modelId == model) return
+        improver.request(item.id, model, whileCharging = true)
+    }
 
     /** Asks the UI to show the file screen (a file was shared to the app). */
     val showFile = Channel<Unit>(Channel.CONFLATED)
@@ -86,6 +127,17 @@ class AppGraph(app: Application) {
     /** The model dictation uses: the chosen one if installed, else the first installed one. */
     init {
         scope.launch { bench.load() } // the Models screen shows measured results too
+        scope.launch {
+            library.load()
+            recorder.recover()
+            improver.schedule()
+        }
+        // Dictation, the keyboard or a recording starts: a background improvement steps aside.
+        scope.launch {
+            combine(live.state, keyboardLive.state, recorder.itemId, files.state) { a, b, r, f ->
+                a.phase != LiveTranscriber.Phase.IDLE || b.phase != LiveTranscriber.Phase.IDLE || r != null || f?.busy == true
+            }.collect { busy -> if (busy) improver.yieldEngine() }
+        }
     }
 
     val activeModel: StateFlow<ModelSpec?> = combine(settings, store.installed) { s, installed ->

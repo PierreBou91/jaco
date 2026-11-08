@@ -92,7 +92,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
         viewModelScope.launch {
             graph.settingsRepo.update(transform)
             // Turning "keep loaded" off frees the memory right away.
-            if (before.keepLoaded && !after.keepLoaded && !graph.live.isRunning) graph.host.release()
+            if (before.keepLoaded && !after.keepLoaded && !graph.engineBusy()) graph.host.release()
         }
     }
 }
@@ -103,6 +103,7 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     var languageDialog by rememberSaveable { mutableStateOf(false) }
     var fileModelDialog by rememberSaveable { mutableStateOf(false) }
+    var improveDialog by rememberSaveable { mutableStateOf(false) }
     val dictationModel = vm.dictationModel.collectAsStateWithLifecycle().value
     val installed = vm.installed.collectAsStateWithLifecycle().value.let { ids -> ModelCatalog.all.filter { it.id in ids } }
     val fileModel = installed.firstOrNull { it.id == s.fileModelId }
@@ -169,6 +170,25 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
                 ) { v -> vm.update { it.copy(livePreview = v) } }
             }
 
+            item { SectionHeader(stringResource(R.string.settings_recordings)) }
+            item {
+                SwitchItem(
+                    title = stringResource(R.string.setting_keep_audio),
+                    summary = stringResource(R.string.setting_keep_audio_summary),
+                    icon = R.drawable.ic_audio_file,
+                    checked = s.keepAudio,
+                ) { v -> vm.update { it.copy(keepAudio = v) } }
+            }
+            if (s.keepAudio) item {
+                val improve = installed.firstOrNull { it.id == s.improveModelId }
+                Item(
+                    title = stringResource(R.string.setting_improve),
+                    summary = improve?.let { stringResource(R.string.setting_improve_on, it.name) } ?: stringResource(R.string.setting_improve_off),
+                    icon = R.drawable.ic_auto_awesome,
+                    onClick = { improveDialog = true },
+                )
+            }
+
             item { SectionHeader(stringResource(R.string.settings_performance)) }
             item { ThreadsSetting(s.effectiveThreads) { v -> vm.update { it.copy(threads = v) } } }
             item {
@@ -232,6 +252,12 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
         FileModelDialog(s, installed, current = fileModel, onDismiss = { fileModelDialog = false }) { spec ->
             vm.update { it.copy(fileModelId = spec?.id) }
             fileModelDialog = false
+        }
+    }
+    if (improveDialog) {
+        ImproveDialog(installed, current = installed.firstOrNull { it.id == s.improveModelId }, onDismiss = { improveDialog = false }) { spec ->
+            vm.update { it.copy(improveModelId = spec?.id) }
+            improveDialog = false
         }
     }
     if (languageDialog) {
@@ -412,6 +438,28 @@ private fun FileModelDialog(s: AppSettings, installed: List<ModelSpec>, current:
                         else stringResource(R.string.setting_file_model_told, endonym(s.language))
                     RadioRow(spec.name, note, selected = spec == current) { onSelect(spec) }
                 }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
+    )
+}
+
+/** Off, or the model that transcribes recordings again while charging. */
+@Composable
+private fun ImproveDialog(installed: List<ModelSpec>, current: ModelSpec?, onDismiss: () -> Unit, onSelect: (ModelSpec?) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.setting_improve)) },
+        text = {
+            Column(Modifier.selectableGroup().verticalScroll(rememberScrollState())) {
+                Text(
+                    stringResource(R.string.setting_improve_help),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                RadioRow(stringResource(R.string.setting_improve_off), null, selected = current == null) { onSelect(null) }
+                installed.forEach { spec -> RadioRow(spec.name, null, selected = spec == current) { onSelect(spec) } }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },

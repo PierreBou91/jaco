@@ -12,6 +12,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +36,10 @@ data class FileState(
     val segments: List<FileTranscriber.Segment> = emptyList(),
     val elapsedMs: Long = 0,
     val problem: Problem? = null,
+    /** Its entry in the library. */
+    val itemId: String? = null,
+    /** Waits for the recording in progress to end (one model in memory at a time). */
+    val waitingForRecording: Boolean = false,
 ) {
     enum class Phase { COPYING, RUNNING, DONE, STOPPED, FAILED }
     enum class Problem { UNREADABLE, NO_MODEL, ENGINE }
@@ -45,7 +51,8 @@ data class FileState(
 /**
  * Receives audio files (shared from another app, or picked), copies them into the app's cache (a
  * shared link may stop working once the sharing app is gone) and transcribes them in the background.
- * Runs in the app's scope, so leaving the screen does not stop it.
+ * Runs in the app's scope, so leaving the screen does not stop it. Each file becomes a [Library] item,
+ * with a copy of the audio if the settings keep it; transcribing it again adds a transcript to it.
  */
 class FileJob(
     private val context: Context,
@@ -57,6 +64,10 @@ class FileJob(
     private val defaultLanguage: suspend (ModelSpec?) -> String,
     private val optionsFor: suspend (ModelSpec, language: String) -> EngineOptions,
     private val stopDictation: () -> Unit,
+    private val library: Library,
+    private val keepAudio: suspend () -> Boolean,
+    /** Returns once no recording is running (it holds its model in memory). */
+    private val awaitNoRecording: suspend (onWait: () -> Unit) -> Unit,
 ) {
     private val _state = MutableStateFlow<FileState?>(null)
     val state: StateFlow<FileState?> = _state.asStateFlow()
@@ -70,7 +81,8 @@ class FileJob(
         val previous = job
         previous?.cancel()
         val name = displayName(uri)
-        _state.value = FileState(name)
+        val itemId = library.newId()
+        _state.value = FileState(name, itemId = itemId)
         job = scope.launch {
             previous?.join() // it may still be reading the previous copy
             val model = defaultModel()
@@ -86,6 +98,17 @@ class FileJob(
                 _state.update { it?.copy(phase = FileState.Phase.FAILED, problem = FileState.Problem.UNREADABLE) }
                 return@launch
             }
+            val audio = if (keepAudio()) withContext(Dispatchers.IO) {
+                val file = "audio." + (name.substringAfterLast('.', "").lowercase().takeIf { it.length in 2..4 } ?: "m4a")
+                runCatching { input.copyTo(File(library.dir(itemId).apply { mkdirs() }, file), overwrite = true) }.map { file }.getOrNull()
+            } else null
+            library.add(
+                LibraryItem(
+                    id = itemId, kind = LibraryItem.Kind.FILE, title = name.substringBeforeLast('.').ifBlank { name },
+                    createdAt = System.currentTimeMillis(), durationMs = 0, audio = audio, transcripts = emptyList(),
+                    shown = 0, status = LibraryItem.Status.TRANSCRIBING,
+                ),
+            )
             run(model, language)
         }
     }
@@ -96,7 +119,7 @@ class FileJob(
         if (s.phase == FileState.Phase.COPYING || !input.exists()) return
         val previous = job
         previous?.cancel()
-        _state.value = FileState(s.name, model = model, language = language ?: s.language, durationMs = s.durationMs)
+        _state.value = FileState(s.name, model = model, language = language ?: s.language, durationMs = s.durationMs, itemId = s.itemId)
         job = scope.launch {
             previous?.join()
             run(model, language ?: s.language ?: defaultLanguage(model))
@@ -114,9 +137,39 @@ class FileJob(
             return
         }
         stopDictation() // one user of the engine at a time
+        awaitNoRecording { _state.update { it?.copy(waitingForRecording = true) } }
+        _state.update { it?.copy(waitingForRecording = false) }
         val t0 = SystemClock.elapsedRealtime()
         val options = optionsFor(model, language)
         _state.update { it?.copy(phase = FileState.Phase.RUNNING, model = model, language = language, usedLanguage = options.language) }
+        val itemId = _state.value?.itemId
+        // A new transcript in the library item, filled as sentences come.
+        var index = -1
+        if (itemId != null) library.update(itemId) {
+            index = it.transcripts.size
+            it.copy(
+                transcripts = it.transcripts + Transcript(model.id, options.language, live = false, System.currentTimeMillis(), emptyList()),
+                shown = index, status = LibraryItem.Status.TRANSCRIBING,
+            )
+        }
+        suspend fun save(done: Boolean) {
+            if (itemId == null || index < 0) return
+            val s = _state.value ?: return
+            library.update(itemId) { item ->
+                item.copy(
+                    transcripts = item.transcripts.mapIndexed { i, t -> if (i == index) t.copy(segments = s.segments) else t },
+                    durationMs = s.durationMs ?: item.durationMs,
+                    status = if (done) LibraryItem.Status.DONE else item.status,
+                )
+            }
+        }
+        // Saved every few seconds, so a long file is not lost if the app is closed.
+        val saver = scope.launch {
+            while (true) {
+                delay(SAVE_EVERY_MS)
+                save(done = false)
+            }
+        }
         try {
             transcriber.transcribe(input, model, options, object : FileTranscriber.Listener {
                 override fun onOpened(durationMs: Long?) = _state.update { it?.copy(durationMs = durationMs) }
@@ -128,13 +181,24 @@ class FileJob(
             _state.update {
                 it?.copy(phase = FileState.Phase.DONE, doneMs = it.durationMs ?: it.doneMs, elapsedMs = SystemClock.elapsedRealtime() - t0)
             }
+            save(done = true)
         } catch (e: CancellationException) {
+            withContext(NonCancellable) { save(done = true) }
             throw e
         } catch (e: UnsupportedAudioException) {
             _state.update { it?.copy(phase = FileState.Phase.FAILED, problem = FileState.Problem.UNREADABLE) }
+            // Nothing could be read: the file has no place in the library.
+            if (itemId != null && _state.value?.segments.isNullOrEmpty()) library.delete(itemId) else save(done = true)
         } catch (t: Throwable) {
             _state.update { it?.copy(phase = FileState.Phase.FAILED, problem = FileState.Problem.ENGINE) }
+            save(done = true)
+        } finally {
+            saver.cancel()
         }
+    }
+
+    private companion object {
+        const val SAVE_EVERY_MS = 5_000L
     }
 
     private fun displayName(uri: Uri): String =

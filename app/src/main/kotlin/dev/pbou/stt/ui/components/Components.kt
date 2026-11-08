@@ -146,7 +146,7 @@ fun DownloadStatus(
 
 /** The big round microphone button; a soft disc behind it grows with the voice while listening. */
 @Composable
-fun MicButton(listening: Boolean, finishing: Boolean, level: () -> Float, onClick: () -> Unit) {
+fun MicButton(listening: Boolean, finishing: Boolean, level: () -> Float, onClick: () -> Unit, stopLabel: String? = null) {
     val primary = MaterialTheme.colorScheme.primary
     val halo by animateFloatAsState(if (listening) 1f else 0f, label = "halo")
     Box(Modifier.size(112.dp), contentAlignment = Alignment.Center) {
@@ -184,7 +184,7 @@ fun MicButton(listening: Boolean, finishing: Boolean, level: () -> Float, onClic
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     painterResource(if (listening) R.drawable.ic_stop_fill else R.drawable.ic_mic_fill),
-                    contentDescription = stringResource(if (listening) R.string.action_stop else R.string.action_dictate),
+                    contentDescription = if (listening && stopLabel != null) stopLabel else stringResource(if (listening) R.string.action_stop else R.string.action_dictate),
                     modifier = Modifier.size(34.dp),
                 )
             }

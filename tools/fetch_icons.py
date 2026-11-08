@@ -14,6 +14,7 @@ mic:fill stop:fill content_copy share delete download settings:fill deployed_cod
 chevron_right info wifi error refresh more_vert language graphic_eq timer speed memory arrow_back tune
 pause play_arrow delete_sweep check check_circle:fill hard_drive star:fill bolt verified:fill
 audio_file folder_open keyboard backspace keyboard_return send search arrow_forward space_bar
+library_books:fill fiber_manual_record:fill pause:fill play_arrow:fill auto_awesome edit schedule notes replay_10 forward_10
 """.split()
 
 BASE = "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/{n}/materialsymbolsrounded/{n}{v}_24px.svg"
@@ -24,9 +25,9 @@ TEMPLATE = """<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="960"
-    android:viewportHeight="960">
-    <group android:translateY="960">
+    android:viewportWidth="{size}"
+    android:viewportHeight="{size}">
+    <group android:translateY="{shift}">
         <path
             android:fillColor="@android:color/white"
             android:pathData="{d}" />
@@ -41,8 +42,12 @@ def fetch(name: str, filled: bool) -> None:
     paths = re.findall(r'<path d="([^"]+)"', svg)
     if len(paths) != 1:
         sys.exit(f"{name}: expected one path, got {len(paths)}")
+    # Most symbols are drawn on a 960 grid shifted up by 960 (viewBox "0 -960 960 960"); a few have no viewBox and use their 24-unit size.
+    m = re.search(r'viewBox="([^"]+)"', svg)
+    box = m.group(1).split() if m else ["0", "0", re.search(r'width="([^"]+)"', svg).group(1), "0"]
+    size, shift = box[2], -float(box[1]) + 0.0  # + 0.0: no "-0"
     out = OUT / f"ic_{name}{'_fill' if filled else ''}.xml"
-    out.write_text(TEMPLATE.format(n=name, fill_note=" filled" if filled else "", d=paths[0]))
+    out.write_text(TEMPLATE.format(n=name, fill_note=" filled" if filled else "", d=paths[0], size=size, shift=f"{shift:g}"))
 
 
 for spec in ICONS:

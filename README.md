@@ -33,6 +33,15 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   Jaco then opens in the field by itself. With a permission given once from a computer
   (`adb shell pm grant dev.pbou.stt android.permission.WRITE_SECURE_SETTINGS`), the tile switches in one
   tap, to Jaco and back.
+- **Recorder and Library** (M3): a Library tab with every recording and transcribed file, newest first, with
+  search (accents and case ignored). Record a meeting or a lecture: each sentence is transcribed at its pause
+  with the dictation model and saved at once, in the background with a notification (pause, resume, stop),
+  screen off or in another app. No word-by-word preview while recording, to save battery over hours.
+  "Keep the audio" (off by default) saves it as M4A (AAC, 48 kbps, about 21 MB per hour), written so that a
+  crash or a dead battery loses nothing already recorded. With the audio: playback (tap a sentence to hear
+  it), share the audio, transcribe again with another model, and "Improve while charging": a bigger model
+  (e.g. Cohere) transcribes it again when the phone is plugged in; the live version stays one tap away.
+  Export as plain text or text with times. Rename, delete.
 - **Settings**: keyboard, language, model for files, end-of-sentence pause, live preview, CPU cores (defaults
   to the count measured fastest, usually 4: more cores is slower on phones), keep the model in memory, timings.
 - Dark theme with an orange accent, Inter font, English and French UI.
@@ -72,7 +81,7 @@ models from `~/models/stt` into the app.
 
 - **M1, the lab**: done (benchmark, transcribe a file).
 - **M2, the keyboard**: first version done (voice-only keyboard); next: polish from daily use.
-- **M3, the recorder**: long background recordings, timestamps, playback, history, search, export.
+- **M3, the recorder**: first version done (recorder, Library, playback, search, export, improve while charging).
 - **M4, speakers**: diarization (who spoke when) on recordings.
 - Later: rewriting with a small local LLM, translation, call transcription research.
 

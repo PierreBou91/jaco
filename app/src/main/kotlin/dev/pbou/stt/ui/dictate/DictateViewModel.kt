@@ -78,7 +78,7 @@ class DictateViewModel(private val graph: AppGraph) : ViewModel() {
             viewModelScope,
             LiveTranscriber.Config(
                 spec = model, options = options, pauseSeconds = u.settings.pauseSeconds,
-                partials = u.settings.livePreview, releaseAfter = !u.settings.keepLoaded,
+                partials = u.settings.livePreview, releaseAfter = !u.settings.keepLoaded && !graph.recorder.isActive,
             ),
         )
     }

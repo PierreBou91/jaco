@@ -13,9 +13,9 @@ one gets decided when its time comes.
   `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`), so apps' own mic buttons and some keyboards use Jaco.
   The user picks it in the system settings ("Voice input"); some phones hide that screen, then only adb
   can set it. Does not help with SwiftKey (hard-wired to Google). To decide.
-- **A full keyboard** (letters, suggestions, dictation in one): a thought, not a plan. Big job, see the
-  discussion of 2026-11-08: the hard part is typing quality (autocorrect, prediction, swipe), not the
-  plumbing. First step if it comes back: try HeliBoard with Jaco as its voice input.
+- **A full keyboard** (letters, suggestions, dictation in one): Pierre wants it "one day, from scratch", as a
+  fully offline replacement for SwiftKey. Big job, see the discussion of 2026-11-08: the hard part is typing
+  quality (autocorrect, prediction, swipe), not the plumbing.
 
 ## Loose ends
 
@@ -29,3 +29,7 @@ one gets decided when its time comes.
   not swapped in either.
 - **Thread benchmark**: one pass on the Galaxy Z Flip6, so heat may have slowed the high thread counts a
   little. Run `ThreadsBenchmark` with `-e passes 2` on new phones before trusting a single run.
+- **Recorder, not yet checked on a phone**: waiting for the charger before improving (the test phone was
+  plugged in, so it ran at once); an improvement stepping aside when dictation starts; the notification's
+  own Pause and Stop buttons (the screen's buttons are checked); dictating while a recording runs (both
+  share the microphone); a file transcribed with "Keep the audio" on.

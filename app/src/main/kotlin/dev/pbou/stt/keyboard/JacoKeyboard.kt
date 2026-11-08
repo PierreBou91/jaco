@@ -163,7 +163,7 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
         idleRelease?.cancel()
         idleRelease = lifecycleScope.launch {
             delay(IDLE_RELEASE_MS)
-            if (!live.isRunning && !graph.live.isRunning && graph.files.state.value?.busy != true) graph.host.release()
+            if (!graph.engineBusy() && graph.improver.progress.value.isEmpty()) graph.host.release()
         }
     }
 
@@ -243,7 +243,7 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
                 options = graph.options(model, s),
                 pauseSeconds = s.pauseSeconds,
                 partials = s.livePreview,
-                releaseAfter = !s.keepLoaded,
+                releaseAfter = !s.keepLoaded && !graph.recorder.isActive, // a recording uses the same model
             ),
         )
     }

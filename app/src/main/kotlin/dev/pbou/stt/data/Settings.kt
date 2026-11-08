@@ -42,6 +42,10 @@ data class AppSettings(
     val showTimings: Boolean = false,
     /** The keyboard starts listening as soon as it opens. */
     val keyboardAutoStart: Boolean = true,
+    /** Recordings keep their audio (playback, sharing, a better transcription later). Off: only the text. */
+    val keepAudio: Boolean = false,
+    /** With [keepAudio]: the model that transcribes recordings again while charging, null for none. */
+    val improveModelId: String? = null,
 ) {
     /** The threads to use: the chosen number, else the phone's fast cores. */
     val effectiveThreads: Int get() = threads ?: recommendedThreads
@@ -92,6 +96,8 @@ class SettingsRepository(private val context: Context) {
         val wifiOnly = booleanPreferencesKey("wifi_only")
         val timings = booleanPreferencesKey("show_timings")
         val keyboardAutoStart = booleanPreferencesKey("keyboard_auto_start")
+        val keepAudio = booleanPreferencesKey("keep_audio")
+        val improveModel = stringPreferencesKey("improve_model")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map(::read)
@@ -110,6 +116,8 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.wifiOnly] = s.wifiOnly
             prefs[Keys.timings] = s.showTimings
             prefs[Keys.keyboardAutoStart] = s.keyboardAutoStart
+            prefs[Keys.keepAudio] = s.keepAudio
+            if (s.improveModelId == null) prefs.remove(Keys.improveModel) else prefs[Keys.improveModel] = s.improveModelId
         }
     }
 
@@ -128,6 +136,8 @@ class SettingsRepository(private val context: Context) {
             wifiOnly = p[Keys.wifiOnly] ?: d.wifiOnly,
             showTimings = p[Keys.timings] ?: d.showTimings,
             keyboardAutoStart = p[Keys.keyboardAutoStart] ?: d.keyboardAutoStart,
+            keepAudio = p[Keys.keepAudio] ?: d.keepAudio,
+            improveModelId = p[Keys.improveModel],
         )
     }
 }

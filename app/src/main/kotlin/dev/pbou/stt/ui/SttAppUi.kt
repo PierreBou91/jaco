@@ -19,15 +19,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import dev.pbou.stt.AppGraph
 import dev.pbou.stt.R
 import dev.pbou.stt.data.DownloadState
@@ -36,6 +39,10 @@ import dev.pbou.stt.ui.bench.BenchViewModel
 import dev.pbou.stt.ui.dictate.DictateScreen
 import dev.pbou.stt.ui.file.FileScreen
 import dev.pbou.stt.ui.file.FileViewModel
+import dev.pbou.stt.ui.library.ItemScreen
+import dev.pbou.stt.ui.library.ItemViewModel
+import dev.pbou.stt.ui.library.LibraryScreen
+import dev.pbou.stt.ui.library.LibraryViewModel
 import dev.pbou.stt.ui.dictate.DictateViewModel
 import dev.pbou.stt.ui.models.ModelsScreen
 import dev.pbou.stt.ui.models.ModelsViewModel
@@ -45,6 +52,7 @@ import dev.pbou.stt.ui.settings.SettingsViewModel
 
 private enum class Tab(val route: String, @StringRes val label: Int, @DrawableRes val icon: Int, @DrawableRes val selectedIcon: Int) {
     DICTATE("dictate", R.string.nav_dictate, R.drawable.ic_mic, R.drawable.ic_mic_fill),
+    LIBRARY("library", R.string.nav_library, R.drawable.ic_library_books, R.drawable.ic_library_books_fill),
     MODELS("models", R.string.nav_models, R.drawable.ic_deployed_code, R.drawable.ic_deployed_code_fill),
     SETTINGS("settings", R.string.nav_settings, R.drawable.ic_settings, R.drawable.ic_settings_fill),
 }
@@ -52,6 +60,9 @@ private enum class Tab(val route: String, @StringRes val label: Int, @DrawableRe
 private const val LICENSES = "licenses"
 private const val BENCH = "bench"
 private const val FILE = "file"
+private const val ITEM = "item/{id}"
+
+private fun itemRoute(id: String) = "item/$id"
 
 @Composable
 fun SttAppUi(graph: AppGraph) {
@@ -70,6 +81,10 @@ fun SttAppUi(graph: AppGraph) {
     // A file shared to the app: show it being transcribed.
     LaunchedEffect(Unit) {
         for (request in graph.showFile) nav.navigate(FILE) { launchSingleTop = true }
+    }
+    // The recording notification: show its item.
+    LaunchedEffect(Unit) {
+        for (id in graph.showItem) nav.navigate(itemRoute(id)) { launchSingleTop = true }
     }
 
     Scaffold(
@@ -103,6 +118,19 @@ fun SttAppUi(graph: AppGraph) {
         ) {
             composable(Tab.DICTATE.route) {
                 DictateScreen(viewModel { DictateViewModel(graph) }, onManageModels = { go(Tab.MODELS) }, onOpenFile = { nav.navigate(FILE) })
+            }
+            composable(Tab.LIBRARY.route) {
+                val app = LocalContext.current.applicationContext
+                LibraryScreen(
+                    viewModel { LibraryViewModel(graph, app) },
+                    onOpen = { nav.navigate(itemRoute(it)) { launchSingleTop = true } },
+                    onFile = { nav.navigate(FILE) },
+                    onManageModels = { go(Tab.MODELS) },
+                )
+            }
+            composable(ITEM, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                ItemScreen(viewModel(key = id) { ItemViewModel(graph, id) }, onBack = { nav.popBackStack() })
             }
             composable(Tab.MODELS.route) {
                 ModelsScreen(viewModel { ModelsViewModel(graph) }, onBenchmark = { nav.navigate(BENCH) })

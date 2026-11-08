@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
 package dev.pbou.stt.ui.file
 
@@ -8,6 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -66,9 +68,11 @@ import dev.pbou.stt.R
 import dev.pbou.stt.data.FileState
 import dev.pbou.stt.engine.FileTranscriber
 import dev.pbou.stt.engine.ModelSpec
+import dev.pbou.stt.ui.choosableLanguages
 import dev.pbou.stt.ui.components.IconTile
 import dev.pbou.stt.ui.dictate.copyText
 import dev.pbou.stt.ui.dictate.shareText
+import dev.pbou.stt.ui.endonym
 import kotlinx.coroutines.launch
 
 /** Picker types: audio, plus videos (their sound is transcribed). */
@@ -147,9 +151,10 @@ fun FileScreen(vm: FileViewModel, onBack: () -> Unit, onManageModels: () -> Unit
                         Header(
                             file = file,
                             installed = ui.installed,
-                            onModel = vm::rerun,
+                            onModel = { vm.rerun(it) },
+                            onLanguage = { code -> file.model?.let { vm.rerun(it, code) } },
                             onStop = vm::stop,
-                            onRestart = { file.model?.let(vm::rerun) },
+                            onRestart = { file.model?.let { vm.rerun(it) } },
                             onManageModels = onManageModels,
                         )
                     }
@@ -191,6 +196,7 @@ private fun Header(
     file: FileState,
     installed: List<ModelSpec>,
     onModel: (ModelSpec) -> Unit,
+    onLanguage: (String) -> Unit,
     onStop: () -> Unit,
     onRestart: () -> Unit,
     onManageModels: () -> Unit,
@@ -202,9 +208,55 @@ private fun Header(
                 Text(clock(it), style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        file.model?.let { ModelChip(it, installed, enabled = file.phase != FileState.Phase.COPYING, onModel = onModel) }
+        file.model?.let { model ->
+            val enabled = file.phase != FileState.Phase.COPYING
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ModelChip(model, installed, enabled, onModel)
+                val choosable = choosableLanguages(model)
+                if (choosable.isNotEmpty()) {
+                    LanguageChip(file.usedLanguage ?: file.language, choosable, enabled, onLanguage)
+                } else {
+                    // Nothing to choose: say why, so the missing choice is not a mystery.
+                    Text(
+                        stringResource(R.string.language_detected),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp),
+                    )
+                }
+            }
+        }
         Status(file, onStop, onRestart, onManageModels)
         if (file.segments.isNotEmpty()) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/** The language the model is told; picking another one transcribes the file again in it. */
+@Composable
+private fun LanguageChip(current: String?, choosable: List<String>, enabled: Boolean, onLanguage: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val name = current?.let { endonym(it) }.orEmpty()
+    val description = stringResource(R.string.cd_change_language, name)
+    Box {
+        AssistChip(
+            onClick = { open = true },
+            enabled = enabled,
+            label = { Text(name) },
+            leadingIcon = { Icon(painterResource(R.drawable.ic_language), contentDescription = null, modifier = Modifier.size(18.dp)) },
+            trailingIcon = { Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, modifier = Modifier.size(18.dp)) },
+            modifier = Modifier.semantics { contentDescription = description },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            choosable.forEach { code ->
+                DropdownMenuItem(
+                    text = { Text(endonym(code)) },
+                    onClick = { open = false; if (code != current) onLanguage(code) },
+                    trailingIcon = if (code == current) {
+                        { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
+                    } else null,
+                )
+            }
+        }
     }
 }
 

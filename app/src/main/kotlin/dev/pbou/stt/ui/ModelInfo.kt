@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import dev.pbou.stt.R
+import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.Bench
 import dev.pbou.stt.engine.Languages
@@ -108,10 +109,15 @@ fun languagesText(spec: ModelSpec): String {
     }
 }
 
-/** "Detect automatically", or the language's own name ("Français", "Deutsch"). */
-@Composable
-fun languageName(code: String): String =
-    if (code == ModelSpec.AUTO) stringResource(R.string.language_auto) else endonym(code)
+/**
+ * The languages the app lets you give [spec]: none for models that detect it by themselves, else
+ * those of the app's list the model knows.
+ */
+fun choosableLanguages(spec: ModelSpec): List<String> = when (val l = spec.languages) {
+    is Languages.Auto -> emptyList()
+    is Languages.Choose -> AppSettings.LANGUAGES.filter { it in l.codes }
+    is Languages.ChooseOrAuto -> AppSettings.LANGUAGES
+}
 
 fun endonym(code: String): String {
     val locale = Locale.forLanguageTag(code)

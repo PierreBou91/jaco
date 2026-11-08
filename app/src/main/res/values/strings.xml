@@ -45,6 +45,7 @@
     <string name="engine_error">The model failed:</string>
     <string name="language_detected">Detects the language</string>
     <string name="cd_change_model">Speech model: %1$s. Change</string>
+    <string name="cd_change_language">Language: %1$s. Change</string>
     <string name="transcript_cleared">Transcript cleared</string>
     <string name="copied">Copied</string>
     <string name="clip_label">Transcript</string>
@@ -64,10 +65,7 @@
         <item quantity="one">%d more model available in Models</item>
         <item quantity="other">%d more models available in Models</item>
     </plurals>
-    <string name="language_auto">Detect automatically</string>
-    <string name="language_auto_short">Auto</string>
     <string name="language_note_auto">%1$s detects the language by itself, sentence by sentence. Other models let you choose it.</string>
-    <string name="language_note_detects">%1$s will detect the language.</string>
     <string name="language_note_fallback">%1$s does not detect the language: it will use %2$s.</string>
 
     <!-- Models -->
@@ -135,7 +133,7 @@
     <string name="settings_lab">Lab</string>
     <string name="settings_about">About</string>
     <string name="setting_language">Spoken language</string>
-    <string name="setting_language_help">Models that detect the language by themselves ignore this setting.</string>
+    <string name="setting_language_help">For the models that must be told the language, like Cohere. Models that detect it by themselves, like Parakeet, ignore this setting: you can mix languages with them.</string>
     <string name="setting_pause">End of a sentence</string>
     <string name="setting_pause_summary">A sentence ends after %1$s s of silence.</string>
     <string name="setting_preview">Show words while speaking</string>

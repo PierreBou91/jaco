@@ -41,6 +41,7 @@
     <string name="engine_error">Le modèle a échoué :</string>
     <string name="language_detected">Détecte la langue</string>
     <string name="cd_change_model">Modèle de reconnaissance : %1$s. Changer</string>
+    <string name="cd_change_language">Langue\u00A0: %1$s. Changer</string>
     <string name="transcript_cleared">Transcription effacée</string>
     <string name="copied">Copié</string>
     <string name="clip_label">Transcription</string>
@@ -59,10 +60,7 @@
         <item quantity="many">%d autres modèles disponibles dans Modèles</item>
         <item quantity="other">%d autres modèles disponibles dans Modèles</item>
     </plurals>
-    <string name="language_auto">Détection automatique</string>
-    <string name="language_auto_short">Auto</string>
     <string name="language_note_auto">%1$s détecte la langue tout seul, phrase par phrase. D\'autres modèles permettent de la choisir.</string>
-    <string name="language_note_detects">%1$s va détecter la langue.</string>
     <string name="language_note_fallback">%1$s ne détecte pas la langue. Langue utilisée\u00A0: %2$s.</string>
 
     <string name="models_installed">Sur ce téléphone</string>
@@ -127,7 +125,7 @@
     <string name="settings_lab">Labo</string>
     <string name="settings_about">À propos</string>
     <string name="setting_language">Langue parlée</string>
-    <string name="setting_language_help">Les modèles qui détectent la langue tout seuls ignorent ce réglage.</string>
+    <string name="setting_language_help">Pour les modèles à qui il faut indiquer la langue, comme Cohere. Ceux qui la détectent tout seuls, comme Parakeet, ignorent ce réglage\u00A0: avec eux, vous pouvez mélanger les langues.</string>
     <string name="setting_pause">Fin de phrase</string>
     <string name="setting_pause_summary">Une phrase se termine après %1$s s de silence.</string>
     <string name="setting_preview">Afficher les mots pendant la dictée</string>

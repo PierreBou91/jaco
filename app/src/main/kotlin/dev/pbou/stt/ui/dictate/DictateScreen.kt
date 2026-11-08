@@ -98,7 +98,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pbou.stt.R
-import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.EngineHost
 import dev.pbou.stt.engine.Languages
@@ -111,6 +110,7 @@ import dev.pbou.stt.ui.bytes
 import dev.pbou.stt.ui.components.Badge
 import dev.pbou.stt.ui.components.DownloadStatus
 import dev.pbou.stt.ui.components.IconTile
+import dev.pbou.stt.ui.choosableLanguages
 import dev.pbou.stt.ui.endonym
 import dev.pbou.stt.ui.rememberNotificationPermission
 import dev.pbou.stt.ui.theme.TranscriptStyle
@@ -546,16 +546,17 @@ private fun ModelSheet(
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
             // Models that detect the language by themselves ignore the choice: only the note is shown for them.
-            if (ui.model?.languages !is Languages.Auto) {
+            val choosable = ui.model?.let(::choosableLanguages).orEmpty()
+            if (choosable.isNotEmpty()) {
                 FlowRow(
                     Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    AppSettings.LANGUAGES.forEach { code ->
+                    choosable.forEach { code ->
                         FilterChip(
                             selected = code == ui.settings.language,
                             onClick = { onSelectLanguage(code) },
-                            label = { Text(if (code == ModelSpec.AUTO) stringResource(R.string.language_auto_short) else endonym(code)) },
+                            label = { Text(endonym(code)) },
                         )
                     }
                 }
@@ -584,8 +585,7 @@ private fun LanguageNote(model: ModelSpec, ui: DictateUi) {
     val used = ui.options?.language
     val text = when (model.languages) {
         is Languages.Auto -> stringResource(R.string.language_note_auto, model.name)
-        is Languages.ChooseOrAuto -> if (used == null) stringResource(R.string.language_note_detects, model.name) else null
-        is Languages.Choose -> if (used != null && used != ui.settings.language) {
+        is Languages.Choose, is Languages.ChooseOrAuto -> if (used != null && used != ui.settings.language) {
             stringResource(R.string.language_note_fallback, model.name, endonym(used))
         } else null
     } ?: return

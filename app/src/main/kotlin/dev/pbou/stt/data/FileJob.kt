@@ -25,6 +25,10 @@ data class FileState(
     val name: String,
     val phase: Phase = Phase.COPYING,
     val model: ModelSpec? = null,
+    /** The language chosen for this file (starts as the settings' one). */
+    val language: String? = null,
+    /** The language the model was told, null if it detects it (or is not running yet). */
+    val usedLanguage: String? = null,
     val durationMs: Long? = null,
     val doneMs: Long = 0,
     val segments: List<FileTranscriber.Segment> = emptyList(),
@@ -49,7 +53,9 @@ class FileJob(
     private val transcriber: FileTranscriber,
     /** The model to use for a new file: the dictation model (null if none is installed). */
     private val defaultModel: suspend () -> ModelSpec?,
-    private val optionsFor: suspend (ModelSpec) -> EngineOptions,
+    /** The language of a new file: the one in the settings. */
+    private val defaultLanguage: suspend () -> String,
+    private val optionsFor: suspend (ModelSpec, language: String) -> EngineOptions,
     private val stopDictation: () -> Unit,
 ) {
     private val _state = MutableStateFlow<FileState?>(null)
@@ -68,7 +74,8 @@ class FileJob(
         job = scope.launch {
             previous?.join() // it may still be reading the previous copy
             val model = defaultModel()
-            _state.update { it?.copy(model = model) }
+            val language = defaultLanguage()
+            _state.update { it?.copy(model = model, language = language) }
             val copied = withContext(Dispatchers.IO) {
                 runCatching {
                     dir.mkdirs()
@@ -79,20 +86,20 @@ class FileJob(
                 _state.update { it?.copy(phase = FileState.Phase.FAILED, problem = FileState.Problem.UNREADABLE) }
                 return@launch
             }
-            run(model)
+            run(model, language)
         }
     }
 
-    /** Transcribes the current file again, for instance with another model. */
-    fun rerun(model: ModelSpec) {
+    /** Transcribes the current file again, with another model or language. */
+    fun rerun(model: ModelSpec, language: String? = null) {
         val s = _state.value ?: return
         if (s.phase == FileState.Phase.COPYING || !input.exists()) return
         val previous = job
         previous?.cancel()
-        _state.value = FileState(s.name, model = model, durationMs = s.durationMs)
+        _state.value = FileState(s.name, model = model, language = language ?: s.language, durationMs = s.durationMs)
         job = scope.launch {
             previous?.join()
-            run(model)
+            run(model, language ?: s.language ?: defaultLanguage())
         }
     }
 
@@ -101,16 +108,17 @@ class FileJob(
         _state.update { if (it?.busy == true) it.copy(phase = FileState.Phase.STOPPED) else it }
     }
 
-    private suspend fun run(model: ModelSpec?) {
+    private suspend fun run(model: ModelSpec?, language: String) {
         if (model == null) {
             _state.update { it?.copy(phase = FileState.Phase.FAILED, problem = FileState.Problem.NO_MODEL) }
             return
         }
         stopDictation() // one user of the engine at a time
         val t0 = SystemClock.elapsedRealtime()
-        _state.update { it?.copy(phase = FileState.Phase.RUNNING, model = model) }
+        val options = optionsFor(model, language)
+        _state.update { it?.copy(phase = FileState.Phase.RUNNING, model = model, language = language, usedLanguage = options.language) }
         try {
-            transcriber.transcribe(input, model, optionsFor(model), object : FileTranscriber.Listener {
+            transcriber.transcribe(input, model, options, object : FileTranscriber.Listener {
                 override fun onOpened(durationMs: Long?) = _state.update { it?.copy(durationMs = durationMs) }
                 override fun onProgress(doneMs: Long) = _state.update {
                     it?.copy(doneMs = maxOf(it.doneMs, doneMs), elapsedMs = SystemClock.elapsedRealtime() - t0)

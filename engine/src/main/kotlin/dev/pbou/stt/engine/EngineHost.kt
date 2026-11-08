@@ -64,7 +64,10 @@ class EngineHost(private val store: ModelStore) {
             if (!store.isInstalled(spec)) throw IllegalStateException("${spec.name} is not installed")
             SherpaEngine(spec, store.dir(spec), options).also {
                 engine = it
-                if (spec.warmUp) it.transcribe(warmUpAudio())
+                // One short decode right after loading, so the first real sentence is not the slow one:
+                // some models set up memory on their first decode (Cohere's first sentence took 3.7 s
+                // against about 2.3 s for the next ones). Costs a fraction of a second on fast models.
+                it.transcribe(warmUpAudio())
                 _state.value = State.Ready(spec, options, SystemClock.elapsedRealtime() - t0)
             }
         } catch (t: Throwable) {

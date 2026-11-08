@@ -62,7 +62,7 @@ import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.ui.components.SectionHeader
-import dev.pbou.stt.ui.languageName
+import dev.pbou.stt.ui.endonym
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -104,7 +104,7 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
             item {
                 Item(
                     title = stringResource(R.string.setting_language),
-                    summary = languageName(s.language),
+                    summary = endonym(s.language),
                     icon = R.drawable.ic_language,
                     onClick = { languageDialog = true },
                 )
@@ -278,7 +278,7 @@ private fun LanguageDialog(current: String, onDismiss: () -> Unit, onSelect: (St
                     ) {
                         RadioButton(selected = code == current, onClick = null)
                         Spacer(Modifier.width(16.dp))
-                        Text(languageName(code), style = MaterialTheme.typography.bodyLarge)
+                        Text(endonym(code), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }

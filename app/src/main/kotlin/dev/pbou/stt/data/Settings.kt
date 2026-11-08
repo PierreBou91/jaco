@@ -1,6 +1,7 @@
 package dev.pbou.stt.data
 
 import android.content.Context
+import android.os.LocaleList
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -8,15 +9,18 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import dev.pbou.stt.engine.ModelSpec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 data class AppSettings(
     /** The model chosen by the user; if it is not installed, the first installed model is used. */
     val defaultModelId: String? = null,
-    /** "auto" or an ISO 639-1 code. */
-    val language: String = ModelSpec.AUTO,
+    /**
+     * The language spoken (ISO 639-1), for the models that must be told it. Models that detect the
+     * language by themselves ignore it. There is no "detect" choice: it would only mean "English" for
+     * the models that cannot detect.
+     */
+    val language: String = "en",
     /** Silence that ends a sentence. */
     val pauseSeconds: Float = 0.6f,
     val livePreview: Boolean = true,
@@ -27,7 +31,13 @@ data class AppSettings(
     val showTimings: Boolean = false,
 ) {
     companion object {
-        val LANGUAGES = listOf(ModelSpec.AUTO, "fr", "en", "de", "es", "it", "pt", "nl")
+        val LANGUAGES = listOf("fr", "en", "de", "es", "it", "pt", "nl")
+
+        /** The phone's first language the app offers, else English. */
+        fun defaultLanguage(): String {
+            val list = LocaleList.getDefault()
+            return (0 until list.size()).map { list[it].language }.firstOrNull { it in LANGUAGES } ?: "en"
+        }
         val THREADS = listOf(2, 4, 6, 8)
         const val PAUSE_MIN = 0.3f
         const val PAUSE_MAX = 1.5f
@@ -66,9 +76,10 @@ class SettingsRepository(private val context: Context) {
     }
 
     private fun read(p: Preferences): AppSettings {
-        val d = AppSettings()
+        val d = AppSettings(language = AppSettings.defaultLanguage())
         return AppSettings(
             defaultModelId = p[Keys.model],
+            // A former "auto" becomes the default too.
             language = p[Keys.language]?.takeIf { it in AppSettings.LANGUAGES } ?: d.language,
             pauseSeconds = (p[Keys.pause] ?: d.pauseSeconds).coerceIn(AppSettings.PAUSE_MIN, AppSettings.PAUSE_MAX),
             livePreview = p[Keys.preview] ?: d.livePreview,

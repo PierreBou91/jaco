@@ -22,7 +22,7 @@ class FileViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun open(uri: Uri) = graph.files.open(uri)
 
-    fun rerun(model: ModelSpec) = graph.files.rerun(model)
+    fun rerun(model: ModelSpec, language: String? = null) = graph.files.rerun(model, language)
 
     fun stop() = graph.files.stop()
 }

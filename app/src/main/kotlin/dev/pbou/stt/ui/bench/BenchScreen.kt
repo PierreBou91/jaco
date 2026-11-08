@@ -70,6 +70,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -80,6 +85,7 @@ import dev.pbou.stt.data.BenchTexts
 import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.Benchmark
 import dev.pbou.stt.engine.ModelCatalog
+import dev.pbou.stt.engine.Wer
 import dev.pbou.stt.ui.components.SectionHeader
 import dev.pbou.stt.ui.endonym
 import dev.pbou.stt.ui.seconds
@@ -399,13 +405,28 @@ private fun Metric(label: String, value: String, modifier: Modifier = Modifier) 
 @Composable
 private fun SentenceResult(s: Benchmark.Sentence) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(s.reference, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(s.text.ifBlank { stringResource(R.string.bench_empty_transcript) }, style = MaterialTheme.typography.bodyMedium)
+        // Words that differ are underlined in orange, in both lines: missed in the sentence, wrong or added in the transcript.
+        val alignment = remember(s) { Wer.align(Wer.words(s.reference), Wer.words(s.text)) }
+        val mark = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)
+        Text(highlighted(s.reference, alignment.refOk, mark), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (s.text.isBlank()) {
+            Text(stringResource(R.string.bench_empty_transcript), style = MaterialTheme.typography.bodyMedium)
+        } else {
+            Text(highlighted(s.text, alignment.hypOk, mark.copy(fontWeight = FontWeight.SemiBold)), style = MaterialTheme.typography.bodyMedium)
+        }
         val errors = s.score.errors
         Text(
             pluralStringResource(R.plurals.bench_sentence_errors, errors, errors) + " · " + stringResource(R.string.bench_seconds, seconds(s.decodeMs)),
             style = MaterialTheme.typography.labelMedium,
             color = if (errors == 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
         )
+    }
+}
+
+private fun highlighted(text: String, ok: BooleanArray, style: SpanStyle): AnnotatedString {
+    val ranges = Wer.wordRanges(text)
+    return buildAnnotatedString {
+        append(Wer.nfc(text))
+        ranges.forEachIndexed { i, r -> if (i < ok.size && !ok[i]) addStyle(style, r.first, r.last + 1) }
     }
 }

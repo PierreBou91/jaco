@@ -64,11 +64,20 @@ class EngineHost(private val store: ModelStore) {
             if (!store.isInstalled(spec)) throw IllegalStateException("${spec.name} is not installed")
             SherpaEngine(spec, store.dir(spec), options).also {
                 engine = it
+                if (spec.warmUp) it.transcribe(warmUpAudio())
                 _state.value = State.Ready(spec, options, SystemClock.elapsedRealtime() - t0)
             }
         } catch (t: Throwable) {
             _state.value = State.Failed(spec, t.message ?: t.javaClass.simpleName)
             throw t
+        }
+    }
+
+    private companion object {
+        /** Two seconds of faint noise: enough for the model to run its encoder and a few decoder steps. */
+        fun warmUpAudio(): FloatArray {
+            val rnd = java.util.Random(42)
+            return FloatArray(2 * SAMPLE_RATE) { (rnd.nextGaussian() * 0.003).toFloat() }
         }
     }
 }

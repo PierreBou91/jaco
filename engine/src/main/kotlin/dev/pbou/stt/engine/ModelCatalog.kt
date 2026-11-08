@@ -159,6 +159,7 @@ object ModelCatalog {
         punctuation = true,
         featureDim = 128,
         bench = Bench(werPercent = 5.2, phoneRtf = 0.53, loadSeconds = 13.7),
+        warmUp = true,
     )
 
     /** In display order: recommended first, then roughly by how usable they are for live dictation. */
@@ -219,6 +220,12 @@ data class ModelSpec(
     val featureDim: Int = 80,
     val bench: Bench? = null,
     val recommended: Boolean = false,
+    /**
+     * Run one short decode right after loading. Some models are much slower on their first decode
+     * (memory set up on first use); measured with the benchmark: Cohere's first sentence took 3.7 s
+     * against about 2.3 s for the next ones, Parakeet showed no difference.
+     */
+    val warmUp: Boolean = false,
 ) {
     /** Space taken once installed. */
     val installBytes: Long get() = files.sumOf { it.size }

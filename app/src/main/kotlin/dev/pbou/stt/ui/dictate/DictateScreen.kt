@@ -110,6 +110,7 @@ import dev.pbou.stt.ui.bytes
 import dev.pbou.stt.ui.components.Badge
 import dev.pbou.stt.ui.components.DownloadStatus
 import dev.pbou.stt.ui.components.IconTile
+import dev.pbou.stt.ui.components.MicButton
 import dev.pbou.stt.ui.choosableLanguages
 import dev.pbou.stt.ui.endonym
 import dev.pbou.stt.ui.rememberNotificationPermission
@@ -372,43 +373,6 @@ private fun Controls(ui: DictateUi, level: () -> Float, onMic: () -> Unit, onCop
             )
             FilledTonalIconButton(onClick = onShare, enabled = ui.hasText, modifier = Modifier.size(56.dp)) {
                 Icon(painterResource(R.drawable.ic_share), contentDescription = stringResource(R.string.action_share))
-            }
-        }
-    }
-}
-
-@Composable
-private fun MicButton(listening: Boolean, finishing: Boolean, level: () -> Float, onClick: () -> Unit) {
-    val primary = MaterialTheme.colorScheme.primary
-    val halo by animateFloatAsState(if (listening) 1f else 0f, label = "halo")
-    Box(Modifier.size(112.dp), contentAlignment = Alignment.Center) {
-        // A soft disc that grows with the voice: shows the microphone hears you.
-        Box(
-            Modifier
-                .size(84.dp)
-                .graphicsLayer {
-                    val s = 1f + 0.32f * level() * halo
-                    scaleX = s; scaleY = s
-                    alpha = halo
-                }
-                .background(primary.copy(alpha = 0.22f), CircleShape),
-        )
-        if (finishing) CircularProgressIndicator(Modifier.size(96.dp), strokeWidth = 3.dp)
-        Surface(
-            onClick = onClick,
-            enabled = !finishing,
-            shape = CircleShape,
-            color = primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shadowElevation = 2.dp,
-            modifier = Modifier.size(80.dp),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painterResource(if (listening) R.drawable.ic_stop_fill else R.drawable.ic_mic_fill),
-                    contentDescription = stringResource(if (listening) R.string.action_stop else R.string.action_dictate),
-                    modifier = Modifier.size(34.dp),
-                )
             }
         }
     }

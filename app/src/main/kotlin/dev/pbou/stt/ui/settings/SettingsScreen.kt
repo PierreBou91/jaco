@@ -2,8 +2,11 @@
 
 package dev.pbou.stt.ui.settings
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -52,7 +55,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dev.pbou.stt.AppGraph
@@ -63,8 +68,8 @@ import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.ui.components.SectionHeader
 import dev.pbou.stt.ui.endonym
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
     val settings = graph.settings
@@ -85,6 +90,10 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
     val s = vm.settings.collectAsStateWithLifecycle().value ?: return
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     var languageDialog by rememberSaveable { mutableStateOf(false) }
+    // Whether the keyboard is turned on in the phone's settings: checked again on coming back from them.
+    val context = LocalContext.current
+    var keyboardEnabled by remember { mutableStateOf(isKeyboardEnabled(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { keyboardEnabled = isKeyboardEnabled(context) }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -100,6 +109,17 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
         },
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp)) {
+            item { SectionHeader(stringResource(R.string.settings_keyboard)) }
+            item { KeyboardSetting(enabled = keyboardEnabled) }
+            item {
+                SwitchItem(
+                    title = stringResource(R.string.setting_kb_autostart),
+                    summary = stringResource(R.string.setting_kb_autostart_summary),
+                    icon = R.drawable.ic_mic,
+                    checked = s.keyboardAutoStart,
+                ) { v -> vm.update { it.copy(keyboardAutoStart = v) } }
+            }
+
             item { SectionHeader(stringResource(R.string.settings_transcription)) }
             item {
                 Item(
@@ -252,6 +272,27 @@ private fun ThreadsSetting(value: Int, onChange: (Int) -> Unit) {
         },
         leadingContent = { Icon(painterResource(R.drawable.ic_bolt), contentDescription = null) },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+    )
+}
+
+private fun isKeyboardEnabled(context: Context): Boolean =
+    context.getSystemService(InputMethodManager::class.java).enabledInputMethodList.any { it.packageName == context.packageName }
+
+/** Off: opens the phone's keyboard list to turn it on. On: opens the keyboard picker, to try it. */
+@Composable
+private fun KeyboardSetting(enabled: Boolean) {
+    val context = LocalContext.current
+    Item(
+        title = stringResource(R.string.setting_kb),
+        summary = stringResource(if (enabled) R.string.setting_kb_on else R.string.setting_kb_off),
+        icon = R.drawable.ic_keyboard,
+        onClick = {
+            if (enabled) {
+                context.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
+            } else {
+                context.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+            }
+        },
     )
 }
 

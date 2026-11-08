@@ -211,4 +211,25 @@
     <string name="file_unreadable">Impossible de lire ce fichier. Les notes vocales, les fichiers MP3, M4A, WAV, OGG et Opus fonctionnent, ainsi que la plupart des vidéos.</string>
     <string name="file_no_model">Téléchargez d\'abord un modèle.</string>
     <string name="file_engine_error">Le modèle s\'est arrêté sur une erreur.</string>
+
+    <!-- Keyboard -->
+    <string name="settings_keyboard">Clavier</string>
+    <string name="setting_kb">Clavier Jaco</string>
+    <string name="setting_kb_off">Désactivé. Touchez pour l\'activer dans les réglages du téléphone.</string>
+    <string name="setting_kb_on">Activé. Pendant la saisie, passez-y avec le bouton clavier en bas de l\'écran.</string>
+    <string name="setting_kb_autostart">Écouter dès l\'ouverture</string>
+    <string name="setting_kb_autostart_summary">Sinon, touchez le micro. Jamais dans les champs de mot de passe.</string>
+    <string name="kb_subtype">Saisie vocale</string>
+    <string name="kb_no_model">Téléchargez d\'abord un modèle dans Jaco\u00A0: touchez le micro.</string>
+    <string name="kb_no_mic">Jaco a besoin du micro\u00A0: touchez-le pour l\'autoriser.</string>
+    <string name="kb_idle">Touchez pour parler</string>
+    <string name="kb_switch">Changer de clavier. Appui long pour choisir.</string>
+    <string name="kb_delete">Effacer</string>
+    <string name="kb_space">Espace</string>
+    <string name="kb_enter">Entrée</string>
+    <string name="kb_send">Envoyer</string>
+    <string name="kb_search">Rechercher</string>
+    <string name="kb_go">Aller</string>
+    <string name="kb_next">Suivant</string>
+    <string name="kb_done">Terminé</string>
 </resources>

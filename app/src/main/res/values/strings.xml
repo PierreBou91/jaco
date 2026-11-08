@@ -219,4 +219,25 @@
     <string name="file_unreadable">This file could not be read. Voice notes, MP3, M4A, WAV, OGG and Opus files work, as well as most videos.</string>
     <string name="file_no_model">Download a model first.</string>
     <string name="file_engine_error">The model stopped with an error.</string>
+
+    <!-- Keyboard -->
+    <string name="settings_keyboard">Keyboard</string>
+    <string name="setting_kb">Jaco keyboard</string>
+    <string name="setting_kb_off">Off. Tap to turn it on in the phone\'s settings.</string>
+    <string name="setting_kb_on">On. While typing, switch to it with the keyboard button at the bottom of the screen.</string>
+    <string name="setting_kb_autostart">Listen as soon as it opens</string>
+    <string name="setting_kb_autostart_summary">Otherwise, tap the microphone. Never in password fields.</string>
+    <string name="kb_subtype">Voice typing</string>
+    <string name="kb_no_model">Download a speech model in Jaco first: tap the microphone.</string>
+    <string name="kb_no_mic">Jaco needs the microphone: tap it to allow.</string>
+    <string name="kb_idle">Tap to speak</string>
+    <string name="kb_switch">Switch keyboard. Long press to choose one.</string>
+    <string name="kb_delete">Delete</string>
+    <string name="kb_space">Space</string>
+    <string name="kb_enter">Enter</string>
+    <string name="kb_send">Send</string>
+    <string name="kb_search">Search</string>
+    <string name="kb_go">Go</string>
+    <string name="kb_next">Next</string>
+    <string name="kb_done">Done</string>
 </resources>

@@ -51,6 +51,8 @@ class AppGraph(app: Application) {
     val installer = ModelInstaller(HttpFetcher("stt_app/${BuildConfig.VERSION_NAME} (Android)"))
     val host = EngineHost(store)
     val live = LiveTranscriber(app.assets, host)
+    /** The keyboard's own dictation, so what is typed elsewhere never lands in the app's transcript. */
+    val keyboardLive = LiveTranscriber(app.assets, host)
     val settingsRepo = SettingsRepository(app)
     val downloads = Downloads(app, store)
     val bench = BenchStore(File(app.filesDir, "bench"))

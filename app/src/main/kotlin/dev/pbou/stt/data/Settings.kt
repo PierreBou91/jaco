@@ -29,6 +29,8 @@ data class AppSettings(
     val keepLoaded: Boolean = true,
     val wifiOnly: Boolean = true,
     val showTimings: Boolean = false,
+    /** The keyboard starts listening as soon as it opens. */
+    val keyboardAutoStart: Boolean = true,
 ) {
     companion object {
         val LANGUAGES = listOf("fr", "en", "de", "es", "it", "pt", "nl")
@@ -57,6 +59,7 @@ class SettingsRepository(private val context: Context) {
         val keepLoaded = booleanPreferencesKey("keep_loaded")
         val wifiOnly = booleanPreferencesKey("wifi_only")
         val timings = booleanPreferencesKey("show_timings")
+        val keyboardAutoStart = booleanPreferencesKey("keyboard_auto_start")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map(::read)
@@ -72,6 +75,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.keepLoaded] = s.keepLoaded
             prefs[Keys.wifiOnly] = s.wifiOnly
             prefs[Keys.timings] = s.showTimings
+            prefs[Keys.keyboardAutoStart] = s.keyboardAutoStart
         }
     }
 
@@ -87,6 +91,7 @@ class SettingsRepository(private val context: Context) {
             keepLoaded = p[Keys.keepLoaded] ?: d.keepLoaded,
             wifiOnly = p[Keys.wifiOnly] ?: d.wifiOnly,
             showTimings = p[Keys.timings] ?: d.showTimings,
+            keyboardAutoStart = p[Keys.keyboardAutoStart] ?: d.keyboardAutoStart,
         )
     }
 }

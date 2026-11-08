@@ -1,5 +1,6 @@
 package dev.pbou.stt.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -19,10 +21,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -130,6 +134,44 @@ fun DownloadStatus(
                     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                     TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
                 }
+            }
+        }
+    }
+}
+
+/** The big round microphone button; a soft disc behind it grows with the voice while listening. */
+@Composable
+fun MicButton(listening: Boolean, finishing: Boolean, level: () -> Float, onClick: () -> Unit) {
+    val primary = MaterialTheme.colorScheme.primary
+    val halo by animateFloatAsState(if (listening) 1f else 0f, label = "halo")
+    Box(Modifier.size(112.dp), contentAlignment = Alignment.Center) {
+        // A soft disc that grows with the voice: shows the microphone hears you.
+        Box(
+            Modifier
+                .size(84.dp)
+                .graphicsLayer {
+                    val s = 1f + 0.32f * level() * halo
+                    scaleX = s; scaleY = s
+                    alpha = halo
+                }
+                .background(primary.copy(alpha = 0.22f), CircleShape),
+        )
+        if (finishing) CircularProgressIndicator(Modifier.size(96.dp), strokeWidth = 3.dp)
+        Surface(
+            onClick = onClick,
+            enabled = !finishing,
+            shape = CircleShape,
+            color = primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shadowElevation = 2.dp,
+            modifier = Modifier.size(80.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painterResource(if (listening) R.drawable.ic_stop_fill else R.drawable.ic_mic_fill),
+                    contentDescription = stringResource(if (listening) R.string.action_stop else R.string.action_dictate),
+                    modifier = Modifier.size(34.dp),
+                )
             }
         }
     }

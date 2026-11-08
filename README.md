@@ -22,7 +22,12 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
 - **Benchmark** (M1): read six sentences (French or English) once; every installed model then transcribes
   them on the phone. Shows word errors, the wait after each sentence, speed and load time, with the
   transcripts. Model cards show your measured result, or an estimated wait from the reference benchmark.
-- **Settings**: language, end-of-sentence pause, live preview, CPU threads, keep the model in memory, timings.
+- **Keyboard** (M2): a voice-only keyboard for any app. Turn it on in Settings > Keyboard, then switch to it
+  from any text field. It listens as soon as it opens; the sentence being spoken shows underlined in the
+  field and is fixed at each pause. Keys: switch back, delete, microphone, space, and the field's action
+  (send, search...), which waits for the last sentence before sending. Also a "voice" keyboard for
+  keyboards whose microphone key opens one (AOSP, HeliBoard). Frees the model 5 minutes after last use.
+- **Settings**: keyboard, language, end-of-sentence pause, live preview, CPU threads, keep the model in memory, timings.
 - Dark theme with an orange accent, Inter font, English and French UI.
 
 ## Build
@@ -44,8 +49,8 @@ models from `~/models/stt` into the app.
 
 | Module | Role |
 |---|---|
-| `engine/` | No UI. `ModelCatalog` (every model: files, sizes, SHA-256, source, benchmark), `ModelStore` (what is installed), `ModelInstaller` (download, resume, verify, unpack), `EngineHost` (keeps one model loaded, single native thread), `LiveTranscriber` (mic, VAD, previews). Meant to be shared with the future keyboard. |
-| `app/` | Compose UI (`ui/dictate`, `ui/models`, `ui/settings`), settings (DataStore), downloads (WorkManager). |
+| `engine/` | No UI. `ModelCatalog` (every model: files, sizes, SHA-256, source, benchmark), `ModelStore` (what is installed), `ModelInstaller` (download, resume, verify, unpack), `EngineHost` (keeps one model loaded, single native thread), `LiveTranscriber` (mic, VAD, previews), `FileTranscriber`, `Benchmark`. Shared by the app and the keyboard. |
+| `app/` | Compose UI (`ui/dictate`, `ui/file`, `ui/bench`, `ui/models`, `ui/settings`), the keyboard (`keyboard/`, an `InputMethodService` with a Compose panel), settings (DataStore), downloads (WorkManager). |
 
 ### Adding a model
 
@@ -59,7 +64,7 @@ models from `~/models/stt` into the app.
 ## Roadmap
 
 - **M1, the lab**: done (benchmark, transcribe a file).
-- **M2, the keyboard**: a dictation keyboard on the same engine.
+- **M2, the keyboard**: first version done (voice-only keyboard); next: polish from daily use.
 - **M3, the recorder**: long background recordings, timestamps, playback, history, search, export.
 - **M4, speakers**: diarization (who spoke when) on recordings.
 - Later: rewriting with a small local LLM, translation, call transcription research.

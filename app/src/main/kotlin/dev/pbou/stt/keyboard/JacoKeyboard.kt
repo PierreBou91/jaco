@@ -66,6 +66,12 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
     private var committed = 0     // segments of the live state already in the field
     private var composing = false // a preview is shown as composing text
     private var prefix = ""       // the space put before the sentence being previewed
+    private var shown = ""        // the composing text as put in the field: prefix and preview
+    // The app took the sentence being previewed out of the field (WhatsApp's send button sends it and
+    // empties the field): the rest of that sentence, and its final text, must not be typed again.
+    private var skipping = false
+    // A new field opened while the last dictation was still finishing: its text belongs to the old one.
+    private var dropUntilIdle = false
     private var startWhenGranted = false
     private var idleRelease: Job? = null
 
@@ -112,7 +118,14 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
         idleRelease?.cancel()
         inputActive = true
         committed = live.state.value.segments.size
-        composing = false
+        if (restarting) {
+            // The app reset its field (some do after sending): the editor forgot our composing text.
+            if (composing) reclaimPreview()
+        } else {
+            composing = false
+            skipping = false
+            dropUntilIdle = live.isRunning
+        }
         val granted = micGranted()
         _field.value = Field(enter = EnterKey.of(info), micGranted = granted)
         val autoStart = graph.settings.value?.keyboardAutoStart ?: true
@@ -152,24 +165,41 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
     private fun sync(s: LiveTranscriber.State) {
         if (s.segments.size < committed) committed = s.segments.size
         val ic = currentInputConnection
-        if (!inputActive || ic == null) {
+        if (!inputActive || ic == null || dropUntilIdle) {
             committed = s.segments.size
             composing = false
+            if (s.phase == LiveTranscriber.Phase.IDLE) dropUntilIdle = false
             return
         }
         ic.beginBatchEdit()
+        // Before replacing the preview, make sure it is still there: the app may have sent it.
+        if (composing && ic.getTextBeforeCursor(shown.length, 0)?.toString() != shown) {
+            ic.finishComposingText()
+            composing = false
+            skipping = true
+        }
+        val newSegments = committed < s.segments.size
         while (committed < s.segments.size) {
             val text = s.segments[committed++].text
+            if (skipping) {
+                skipping = false // that was the sentence already sent
+                continue
+            }
             val space = if (composing) prefix else Spacing.before(ic.getTextBeforeCursor(1, 0), text)
             ic.commitText(space + text, 1)
             composing = false
         }
-        if (s.partial.isNotBlank()) {
+        // The sentence ended as silence, or the dictation is over: nothing left to hold back.
+        if (skipping && ((s.partial.isBlank() && !newSegments) || s.phase == LiveTranscriber.Phase.IDLE)) skipping = false
+        if (skipping) {
+            // Still the sentence that was sent: do not show it again.
+        } else if (s.partial.isNotBlank()) {
             if (!composing) {
                 prefix = Spacing.before(ic.getTextBeforeCursor(1, 0), s.partial)
                 composing = true
             }
-            ic.setComposingText(prefix + s.partial, 1)
+            shown = prefix + s.partial
+            ic.setComposingText(shown, 1)
         } else if (composing) {
             // The sentence turned out to be silence: remove its preview.
             ic.setComposingText("", 1)
@@ -177,6 +207,17 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
             composing = false
         }
         ic.endBatchEdit()
+    }
+
+    /**
+     * After the app restarted its field: if our preview is still in it, take it out (it is plain text now)
+     * so the next update shows it again as a preview; if it is gone, the app sent it.
+     */
+    private fun reclaimPreview() {
+        composing = false
+        val ic = currentInputConnection ?: return
+        if (ic.getTextBeforeCursor(shown.length, 0)?.toString() == shown) ic.deleteSurroundingText(shown.length, 0)
+        else skipping = true
     }
 
     private fun startListening() {
@@ -187,6 +228,8 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
         live.dismissProblem()
         live.clear() // what earlier dictations typed is in the field already
         committed = 0
+        skipping = false
+        dropUntilIdle = false
         live.start(
             lifecycleScope,
             LiveTranscriber.Config(
@@ -229,11 +272,20 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
 
         override fun delete() {
             val ic = currentInputConnection ?: return
+            if (composing) {
+                // Delete during a sentence throws that sentence away.
+                ic.setComposingText("", 1)
+                ic.finishComposingText()
+                composing = false
+                skipping = true
+                return
+            }
             if (!ic.getSelectedText(0).isNullOrEmpty()) ic.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         }
 
         override fun space() {
-            currentInputConnection?.commitText(" ", 1)
+            // During a sentence a space would replace its preview; the pause puts one anyway.
+            if (!composing) currentInputConnection?.commitText(" ", 1)
         }
 
         override fun enter() {

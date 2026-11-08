@@ -21,7 +21,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +40,7 @@ import dev.pbou.stt.data.DownloadState
 import dev.pbou.stt.data.FailReason
 import dev.pbou.stt.engine.ModelInstaller
 import dev.pbou.stt.ui.bytes
+import kotlinx.coroutines.delay
 
 /** Icon in a soft round tile, used at the top of empty states. */
 @Composable
@@ -156,7 +161,17 @@ fun MicButton(listening: Boolean, finishing: Boolean, level: () -> Float, onClic
                 }
                 .background(primary.copy(alpha = 0.22f), CircleShape),
         )
-        if (finishing) CircularProgressIndicator(Modifier.size(96.dp), strokeWidth = 3.dp)
+        // Most stops finish in a fraction of a second: a spinner flashing that briefly reads like a
+        // "hold to confirm" ring. Show it only when the last sentence really takes a while.
+        var slow by remember { mutableStateOf(false) }
+        LaunchedEffect(finishing) {
+            slow = false
+            if (finishing) {
+                delay(SLOW_FINISH_MS)
+                slow = true
+            }
+        }
+        if (finishing && slow) CircularProgressIndicator(Modifier.size(96.dp), strokeWidth = 3.dp)
         Surface(
             onClick = onClick,
             enabled = !finishing,
@@ -176,3 +191,5 @@ fun MicButton(listening: Boolean, finishing: Boolean, level: () -> Float, onClic
         }
     }
 }
+
+private const val SLOW_FINISH_MS = 600L

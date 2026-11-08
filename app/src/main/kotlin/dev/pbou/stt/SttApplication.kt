@@ -100,7 +100,7 @@ class AppGraph(app: Application) {
 
     fun options(spec: ModelSpec, s: AppSettings, language: String = s.languageFor(spec)) = EngineOptions(
         language = spec.effectiveLanguage(language, deviceLanguages()),
-        threads = s.threads,
+        threads = s.effectiveThreads,
     )
 
     fun deviceLanguages(): List<String> {

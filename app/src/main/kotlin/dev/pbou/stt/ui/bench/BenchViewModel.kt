@@ -3,6 +3,7 @@ package dev.pbou.stt.ui.bench
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pbou.stt.AppGraph
+import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.BenchTexts
 import dev.pbou.stt.engine.Benchmark
 import dev.pbou.stt.engine.EngineOptions
@@ -146,7 +147,7 @@ class BenchViewModel(private val graph: AppGraph) : ViewModel() {
         runJob = viewModelScope.launch {
             try {
                 val clips = graph.bench.clips(lang)
-                val threads = graph.settings.value?.threads ?: 4
+                val threads = graph.settings.value?.effectiveThreads ?: AppSettings.recommendedThreads
                 for ((m, spec) in models.withIndex()) {
                     val options = EngineOptions(spec.effectiveLanguage(lang, graph.deviceLanguages()), threads)
                     try {

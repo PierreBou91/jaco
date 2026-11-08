@@ -133,7 +133,12 @@
     <string name="setting_preview">Afficher les mots pendant la dictée</string>
     <string name="setting_preview_summary">Consomme un peu plus de batterie.</string>
     <string name="setting_threads">Cœurs du processeur</string>
-    <string name="setting_threads_summary">Plus de cœurs va souvent plus vite, mais chauffe le téléphone.</string>
+    <string name="setting_threads_summary">Le nombre de cœurs sur lesquels le modèle travaille en même temps.</string>
+    <plurals name="setting_threads_best">
+        <item quantity="one">%1$d est sans doute le plus rapide. Ce téléphone a %1$d cœur rapide ; au-delà, ses cœurs plus lents freinent les autres.</item>
+        <item quantity="other">%1$d est sans doute le plus rapide. Ce téléphone a %1$d cœurs rapides ; au-delà, ses cœurs plus lents freinent les autres.</item>
+    </plurals>
+    <string name="setting_threads_best_all">Tous les cœurs de ce téléphone vont à la même vitesse : en utiliser plus va souvent plus vite, mais chauffe le téléphone.</string>
     <string name="setting_keep_loaded">Garder le modèle prêt</string>
     <string name="setting_keep_loaded_summary">La dictée démarre tout de suite, mais le modèle reste en mémoire.</string>
     <string name="setting_wifi_only">Télécharger en Wi-Fi uniquement</string>

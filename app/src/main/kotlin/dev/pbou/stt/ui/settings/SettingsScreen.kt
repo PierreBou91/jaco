@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -146,7 +147,7 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
             }
 
             item { SectionHeader(stringResource(R.string.settings_performance)) }
-            item { ThreadsSetting(s.threads) { v -> vm.update { it.copy(threads = v) } } }
+            item { ThreadsSetting(s.effectiveThreads) { v -> vm.update { it.copy(threads = v) } } }
             item {
                 SwitchItem(
                     title = stringResource(R.string.setting_keep_loaded),
@@ -264,16 +265,27 @@ private fun ThreadsSetting(value: Int, onChange: (Int) -> Unit) {
         headlineContent = { Text(stringResource(R.string.setting_threads)) },
         supportingContent = {
             Column {
+                val choices = AppSettings.THREADS
+                val best = AppSettings.recommendedThreads
                 Text(stringResource(R.string.setting_threads_summary))
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                    AppSettings.THREADS.forEachIndexed { i, n ->
+                    choices.forEachIndexed { i, n ->
                         SegmentedButton(
                             selected = n == value,
                             onClick = { onChange(n) },
-                            shape = SegmentedButtonDefaults.itemShape(i, AppSettings.THREADS.size),
-                        ) { Text(n.toString()) }
+                            shape = SegmentedButtonDefaults.itemShape(i, choices.size),
+                            icon = {}, // no check mark: with up to 8 choices, room is short
+                        ) { Text(n.toString(), maxLines = 1, softWrap = false) }
                     }
                 }
+                // Why the default is not the biggest number.
+                Text(
+                    if (best < choices.size) pluralStringResource(R.plurals.setting_threads_best, best, best)
+                    else stringResource(R.string.setting_threads_best_all),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (value == best) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
         },
         leadingContent = { Icon(painterResource(R.drawable.ic_bolt), contentDescription = null) },

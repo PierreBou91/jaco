@@ -13,6 +13,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Real phones are arm64; dropping the other ABIs keeps the APK at about half the size.
         ndk { abiFilters += "arm64-v8a" }
     }
@@ -60,4 +61,6 @@ dependencies {
     implementation(libs.coroutines.android)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.test.ext.junit)
 }

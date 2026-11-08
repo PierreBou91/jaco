@@ -1,4 +1,4 @@
-# Murmur (working title)
+# Jaco
 
 Offline speech-to-text for Android. Speech recognition runs entirely on the phone with open-weight models
 ([Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) by default) through
@@ -62,8 +62,9 @@ models from `~/models/stt` into the app.
 
 ## Licences
 
-The code of this repository is under the [Zero-Clause BSD licence](LICENSE) (0BSD): do anything with it, no
-conditions.
+Copyright 2026 Pierre Bouriat. The code of this repository is under the [Apache License 2.0](LICENSE): use,
+change and redistribute it freely, keeping the licence and the [NOTICE](NOTICE) file. It also grants the patent
+rights needed to use the code.
 
 Third-party files committed here keep their own licences (texts in `third_party/licenses/`):
 

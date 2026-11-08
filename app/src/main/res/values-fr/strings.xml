@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Murmur</string>
+    <string name="app_name">Jaco</string>
 
     <string name="nav_dictate">Dictée</string>
     <string name="nav_models">Modèles</string>

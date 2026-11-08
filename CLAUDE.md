@@ -1,4 +1,4 @@
-# stt_app (Murmur)
+# stt_app (Jaco)
 
 Offline Android speech-to-text, Kotlin + Compose. Read README.md first.
 

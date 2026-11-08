@@ -44,6 +44,8 @@
     <string name="engine_loading_short">Loading…</string>
     <string name="engine_error">The model failed:</string>
     <string name="language_detected">Detects the language</string>
+    <string name="language_auto">Detect automatically</string>
+    <string name="language_auto_short">Auto</string>
     <string name="cd_change_model">Speech model: %1$s. Change</string>
     <string name="cd_change_language">Language: %1$s. Change</string>
     <string name="transcript_cleared">Transcript cleared</string>
@@ -224,7 +226,7 @@
     <string name="settings_keyboard">Keyboard</string>
     <string name="setting_kb">Jaco keyboard</string>
     <string name="setting_kb_off">Off. Tap to turn it on in the phone\'s settings.</string>
-    <string name="setting_kb_on">On. While typing, switch to it with the keyboard button at the bottom of the screen.</string>
+    <string name="setting_kb_on">On. Tap to switch keyboards. While typing, use the tile below or your keyboard\'s switch key.</string>
     <string name="setting_kb_autostart">Listen as soon as it opens</string>
     <string name="setting_kb_autostart_summary">Otherwise, tap the microphone. Never in password fields.</string>
     <string name="kb_subtype">Voice typing</string>
@@ -240,4 +242,8 @@
     <string name="kb_go">Go</string>
     <string name="kb_next">Next</string>
     <string name="kb_done">Done</string>
+    <string name="kb_tile">Jaco keyboard</string>
+    <string name="setting_kb_tile">Quick Settings tile</string>
+    <string name="setting_kb_tile_summary">Switch to Jaco from any app, even if your keyboard has no switch key: pull down the notification shade and tap the tile.</string>
+    <string name="setting_kb_tile_manual">Add it from the edit mode of the notification shade.</string>
 </resources>

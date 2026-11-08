@@ -12,7 +12,7 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
 - **Live dictation**: Silero VAD cuts speech at pauses; the current sentence is re-transcribed about twice a
   second as a preview, then finalised. Copy, share, clear with undo.
 - **Model switcher**: seven models (Parakeet, Canary, Whisper turbo and small, Qwen3-ASR, Omnilingual,
-  Cohere Transcribe), with accuracy and speed measured on a Honor 90, and a spoken-language setting.
+  Cohere Transcribe), with accuracy and speed measured on a Honor 90, and a spoken-language setting (models like Whisper can also detect it: "Auto").
 - **Model manager**: download (resumable, checksum-verified, Wi-Fi only by default, keeps running in the
   background with a notification), pause, resume, delete, pick the one used for dictation.
 - **Transcribe a file** (M1): share a voice note, recording or video to the app ("Transcribe" in the share
@@ -27,6 +27,8 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   field and is fixed at each pause. Keys: switch back, delete, microphone, space, and the field's action
   (send, search...), which waits for the last sentence before sending. Also a "voice" keyboard for
   keyboards whose microphone key opens one (AOSP, HeliBoard). Frees the model 5 minutes after last use.
+  A Quick Settings tile opens the keyboard chooser from any app: SwiftKey has no key to switch keyboards
+  and its voice typing only accepts Google's recognisers, and gesture navigation hides the system's button.
 - **Settings**: keyboard, language, end-of-sentence pause, live preview, CPU threads, keep the model in memory, timings.
 - Dark theme with an orange accent, Inter font, English and French UI.
 

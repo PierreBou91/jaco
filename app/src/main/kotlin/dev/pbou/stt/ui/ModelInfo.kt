@@ -111,12 +111,20 @@ fun languagesText(spec: ModelSpec): String {
 
 /**
  * The languages the app lets you give [spec]: none for models that detect it by themselves, else
- * those of the app's list the model knows.
+ * those of the app's list the model knows, plus "auto" for models that can also detect it.
  */
 fun choosableLanguages(spec: ModelSpec): List<String> = when (val l = spec.languages) {
     is Languages.Auto -> emptyList()
     is Languages.Choose -> AppSettings.LANGUAGES.filter { it in l.codes }
-    is Languages.ChooseOrAuto -> AppSettings.LANGUAGES
+    is Languages.ChooseOrAuto -> listOf(ModelSpec.AUTO) + AppSettings.LANGUAGES
+}
+
+/** "Detect automatically" (or "Auto" when [short]), else the language's own name ("Français"). */
+@Composable
+fun languageLabel(code: String, short: Boolean = false): String = when {
+    code != ModelSpec.AUTO -> endonym(code)
+    short -> stringResource(R.string.language_auto_short)
+    else -> stringResource(R.string.language_auto)
 }
 
 fun endonym(code: String): String {

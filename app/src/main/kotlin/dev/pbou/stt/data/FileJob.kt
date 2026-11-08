@@ -25,7 +25,7 @@ data class FileState(
     val name: String,
     val phase: Phase = Phase.COPYING,
     val model: ModelSpec? = null,
-    /** The language chosen for this file (starts as the settings' one). */
+    /** The language chosen for this file, "auto" or a code (starts as the settings' one). */
     val language: String? = null,
     /** The language the model was told, null if it detects it (or is not running yet). */
     val usedLanguage: String? = null,
@@ -53,8 +53,8 @@ class FileJob(
     private val transcriber: FileTranscriber,
     /** The model to use for a new file: the dictation model (null if none is installed). */
     private val defaultModel: suspend () -> ModelSpec?,
-    /** The language of a new file: the one in the settings. */
-    private val defaultLanguage: suspend () -> String,
+    /** The language of a new file for this model: the one in the settings ("auto" or a code). */
+    private val defaultLanguage: suspend (ModelSpec?) -> String,
     private val optionsFor: suspend (ModelSpec, language: String) -> EngineOptions,
     private val stopDictation: () -> Unit,
 ) {
@@ -74,7 +74,7 @@ class FileJob(
         job = scope.launch {
             previous?.join() // it may still be reading the previous copy
             val model = defaultModel()
-            val language = defaultLanguage()
+            val language = defaultLanguage(model)
             _state.update { it?.copy(model = model, language = language) }
             val copied = withContext(Dispatchers.IO) {
                 runCatching {
@@ -99,7 +99,7 @@ class FileJob(
         _state.value = FileState(s.name, model = model, language = language ?: s.language, durationMs = s.durationMs)
         job = scope.launch {
             previous?.join()
-            run(model, language ?: s.language ?: defaultLanguage())
+            run(model, language ?: s.language ?: defaultLanguage(model))
         }
     }
 

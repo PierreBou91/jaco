@@ -62,6 +62,7 @@ import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.ui.choosableLanguages
 import dev.pbou.stt.ui.components.MicButton
 import dev.pbou.stt.ui.endonym
+import dev.pbou.stt.ui.languageLabel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
@@ -84,7 +85,7 @@ fun KeyboardPanel(graph: AppGraph, field: StateFlow<JacoKeyboard.Field>, actions
 
     val listening = live.phase == LiveTranscriber.Phase.LISTENING || live.phase == LiveTranscriber.Phase.STARTING
     val finishing = live.phase == LiveTranscriber.Phase.FINISHING
-    val language = settings?.language
+    val language = model?.let { m -> settings?.languageFor(m) }
     val choosable = model?.let(::choosableLanguages).orEmpty()
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -102,7 +103,7 @@ fun KeyboardPanel(graph: AppGraph, field: StateFlow<JacoKeyboard.Field>, actions
                             FilterChip(
                                 selected = code == language,
                                 onClick = { picking = false; if (code != language) actions.selectLanguage(code) },
-                                label = { Text(endonym(code)) },
+                                label = { Text(languageLabel(code, short = true)) },
                             )
                         }
                     }
@@ -153,7 +154,7 @@ fun KeyboardPanel(graph: AppGraph, field: StateFlow<JacoKeyboard.Field>, actions
 /** "Parakeet TDT 0.6B v3 · Detects the language", or the language to tap and change. */
 @Composable
 private fun ModelLine(model: ModelSpec, language: String?, canChoose: Boolean, picking: Boolean, onClick: () -> Unit) {
-    val lang = if (canChoose) language?.let { endonym(it) }.orEmpty() else stringResource(R.string.language_detected)
+    val lang = if (canChoose && language != ModelSpec.AUTO) language?.let { endonym(it) }.orEmpty() else stringResource(R.string.language_detected)
     val text = "${model.name} · $lang"
     val description = if (canChoose) stringResource(R.string.cd_change_language, lang) else text
     Row(

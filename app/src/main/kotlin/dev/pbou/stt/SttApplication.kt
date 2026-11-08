@@ -14,6 +14,7 @@ import dev.pbou.stt.engine.EngineHost
 import dev.pbou.stt.engine.EngineOptions
 import dev.pbou.stt.engine.FileTranscriber
 import dev.pbou.stt.engine.HttpFetcher
+import dev.pbou.stt.engine.Languages
 import dev.pbou.stt.engine.LiveTranscriber
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.ModelInstaller
@@ -61,8 +62,13 @@ class AppGraph(app: Application) {
     val files = FileJob(
         app, scope, FileTranscriber(app.assets, host),
         defaultModel = { dictationModel(settings.filterNotNull().first()) },
-        defaultLanguage = { settings.filterNotNull().first().language },
-        optionsFor = { spec, language -> options(spec, settings.filterNotNull().first(), language) },
+        defaultLanguage = { spec -> settings.filterNotNull().first().let { s -> spec?.let(s::languageFor) ?: s.language } },
+        optionsFor = { spec, language ->
+            val s = settings.filterNotNull().first()
+            // "Detect" chosen for a file, then a model that cannot detect: use the spoken language.
+            val wanted = if (language == ModelSpec.AUTO && spec.languages !is Languages.ChooseOrAuto) s.language else language
+            options(spec, s, wanted)
+        },
         stopDictation = { live.stop() },
     )
 
@@ -92,7 +98,7 @@ class AppGraph(app: Application) {
         return ModelCatalog.byId(s.defaultModelId)?.takeIf { it.id in installed } ?: ModelCatalog.all.firstOrNull { it.id in installed }
     }
 
-    fun options(spec: ModelSpec, s: AppSettings, language: String = s.language) = EngineOptions(
+    fun options(spec: ModelSpec, s: AppSettings, language: String = s.languageFor(spec)) = EngineOptions(
         language = spec.effectiveLanguage(language, deviceLanguages()),
         threads = s.threads,
     )

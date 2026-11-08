@@ -2,6 +2,8 @@ package dev.pbou.stt.data
 
 import android.content.Context
 import android.os.LocaleList
+import dev.pbou.stt.engine.Languages
+import dev.pbou.stt.engine.ModelSpec
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -21,6 +23,11 @@ data class AppSettings(
      * the models that cannot detect.
      */
     val language: String = "en",
+    /**
+     * Models that can either detect the language or be told it (Whisper) detect it. Models that must be
+     * told it always use [language]; models that only detect ignore both.
+     */
+    val autoDetect: Boolean = true,
     /** Silence that ends a sentence. */
     val pauseSeconds: Float = 0.6f,
     val livePreview: Boolean = true,
@@ -32,6 +39,18 @@ data class AppSettings(
     /** The keyboard starts listening as soon as it opens. */
     val keyboardAutoStart: Boolean = true,
 ) {
+    /** The language to ask [spec] for: [ModelSpec.AUTO] or a code. */
+    fun languageFor(spec: ModelSpec): String =
+        if (autoDetect && spec.languages is Languages.ChooseOrAuto) ModelSpec.AUTO else language
+
+    /** The settings after choosing [code] ([ModelSpec.AUTO] or a language) while [spec] is selected. */
+    fun withLanguage(code: String, spec: ModelSpec?): AppSettings = when {
+        code == ModelSpec.AUTO -> copy(autoDetect = true)
+        // Picking a language for a model that could detect means "do not detect".
+        spec?.languages is Languages.ChooseOrAuto -> copy(language = code, autoDetect = false)
+        else -> copy(language = code)
+    }
+
     companion object {
         val LANGUAGES = listOf("fr", "en", "de", "es", "it", "pt", "nl")
 
@@ -53,6 +72,7 @@ class SettingsRepository(private val context: Context) {
     private object Keys {
         val model = stringPreferencesKey("default_model")
         val language = stringPreferencesKey("language")
+        val autoDetect = booleanPreferencesKey("auto_detect")
         val pause = floatPreferencesKey("pause_seconds")
         val preview = booleanPreferencesKey("live_preview")
         val threads = intPreferencesKey("threads")
@@ -69,6 +89,7 @@ class SettingsRepository(private val context: Context) {
             val s = transform(read(prefs))
             if (s.defaultModelId == null) prefs.remove(Keys.model) else prefs[Keys.model] = s.defaultModelId
             prefs[Keys.language] = s.language
+            prefs[Keys.autoDetect] = s.autoDetect
             prefs[Keys.pause] = s.pauseSeconds
             prefs[Keys.preview] = s.livePreview
             prefs[Keys.threads] = s.threads
@@ -85,6 +106,7 @@ class SettingsRepository(private val context: Context) {
             defaultModelId = p[Keys.model],
             // A former "auto" becomes the default too.
             language = p[Keys.language]?.takeIf { it in AppSettings.LANGUAGES } ?: d.language,
+            autoDetect = p[Keys.autoDetect] ?: d.autoDetect,
             pauseSeconds = (p[Keys.pause] ?: d.pauseSeconds).coerceIn(AppSettings.PAUSE_MIN, AppSettings.PAUSE_MAX),
             livePreview = p[Keys.preview] ?: d.livePreview,
             threads = p[Keys.threads]?.takeIf { it in AppSettings.THREADS } ?: d.threads,

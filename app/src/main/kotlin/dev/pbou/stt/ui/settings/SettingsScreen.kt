@@ -2,11 +2,15 @@
 
 package dev.pbou.stt.ui.settings
 
+import android.app.StatusBarManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,6 +70,7 @@ import dev.pbou.stt.R
 import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.ModelCatalog
+import dev.pbou.stt.keyboard.KeyboardTile
 import dev.pbou.stt.ui.components.SectionHeader
 import dev.pbou.stt.ui.endonym
 import kotlin.math.roundToInt
@@ -111,6 +116,7 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp)) {
             item { SectionHeader(stringResource(R.string.settings_keyboard)) }
             item { KeyboardSetting(enabled = keyboardEnabled) }
+            item { TileSetting() }
             item {
                 SwitchItem(
                     title = stringResource(R.string.setting_kb_autostart),
@@ -275,8 +281,33 @@ private fun ThreadsSetting(value: Int, onChange: (Int) -> Unit) {
     )
 }
 
-private fun isKeyboardEnabled(context: Context): Boolean =
-    context.getSystemService(InputMethodManager::class.java).enabledInputMethodList.any { it.packageName == context.packageName }
+private fun isKeyboardEnabled(context: Context): Boolean = KeyboardTile.isEnabled(context)
+
+/** Offers to add the Quick Settings tile (Android 13+ asks with its own dialog); older phones add it by hand. */
+@Composable
+private fun TileSetting() {
+    val context = LocalContext.current
+    val canAsk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    Item(
+        title = stringResource(R.string.setting_kb_tile),
+        summary = stringResource(R.string.setting_kb_tile_summary) +
+            if (canAsk) "" else " " + stringResource(R.string.setting_kb_tile_manual),
+        icon = R.drawable.ic_tune,
+        onClick = if (canAsk) {
+            { requestTile(context) }
+        } else null,
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun requestTile(context: Context) {
+    context.getSystemService(StatusBarManager::class.java).requestAddTileService(
+        KeyboardTile.component(context),
+        context.getString(R.string.kb_tile),
+        Icon.createWithResource(context, R.drawable.ic_keyboard),
+        context.mainExecutor,
+    ) { }
+}
 
 /** Off: opens the phone's keyboard list to turn it on. On: opens the keyboard picker, to try it. */
 @Composable

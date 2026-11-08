@@ -40,6 +40,8 @@
     <string name="engine_loading_short">Chargement…</string>
     <string name="engine_error">Le modèle a échoué :</string>
     <string name="language_detected">Détecte la langue</string>
+    <string name="language_auto">Détection automatique</string>
+    <string name="language_auto_short">Auto</string>
     <string name="cd_change_model">Modèle de reconnaissance : %1$s. Changer</string>
     <string name="cd_change_language">Langue\u00A0: %1$s. Changer</string>
     <string name="transcript_cleared">Transcription effacée</string>
@@ -216,7 +218,7 @@
     <string name="settings_keyboard">Clavier</string>
     <string name="setting_kb">Clavier Jaco</string>
     <string name="setting_kb_off">Désactivé. Touchez pour l\'activer dans les réglages du téléphone.</string>
-    <string name="setting_kb_on">Activé. Pendant la saisie, passez-y avec le bouton clavier en bas de l\'écran.</string>
+    <string name="setting_kb_on">Activé. Touchez pour changer de clavier. Pendant la saisie, utilisez le bouton ci-dessous ou la touche de changement de clavier de votre clavier.</string>
     <string name="setting_kb_autostart">Écouter dès l\'ouverture</string>
     <string name="setting_kb_autostart_summary">Sinon, touchez le micro. Jamais dans les champs de mot de passe.</string>
     <string name="kb_subtype">Saisie vocale</string>
@@ -232,4 +234,8 @@
     <string name="kb_go">Aller</string>
     <string name="kb_next">Suivant</string>
     <string name="kb_done">Terminé</string>
+    <string name="kb_tile">Clavier Jaco</string>
+    <string name="setting_kb_tile">Bouton des réglages rapides</string>
+    <string name="setting_kb_tile_summary">Passez à Jaco depuis n\'importe quelle app, même si votre clavier n\'a pas de touche pour changer de clavier\u00A0: déroulez le volet des notifications et touchez le bouton.</string>
+    <string name="setting_kb_tile_manual">Ajoutez-le depuis le mode édition du volet des notifications.</string>
 </resources>

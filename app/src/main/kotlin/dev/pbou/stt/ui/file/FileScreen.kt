@@ -72,7 +72,7 @@ import dev.pbou.stt.ui.choosableLanguages
 import dev.pbou.stt.ui.components.IconTile
 import dev.pbou.stt.ui.dictate.copyText
 import dev.pbou.stt.ui.dictate.shareText
-import dev.pbou.stt.ui.endonym
+import dev.pbou.stt.ui.languageLabel
 import kotlinx.coroutines.launch
 
 /** Picker types: audio, plus videos (their sound is transcribed). */
@@ -235,7 +235,7 @@ private fun Header(
 @Composable
 private fun LanguageChip(current: String?, choosable: List<String>, enabled: Boolean, onLanguage: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    val name = current?.let { endonym(it) }.orEmpty()
+    val name = current?.let { languageLabel(it) }.orEmpty()
     val description = stringResource(R.string.cd_change_language, name)
     Box {
         AssistChip(
@@ -249,7 +249,7 @@ private fun LanguageChip(current: String?, choosable: List<String>, enabled: Boo
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             choosable.forEach { code ->
                 DropdownMenuItem(
-                    text = { Text(endonym(code)) },
+                    text = { Text(languageLabel(code)) },
                     onClick = { open = false; if (code != current) onLanguage(code) },
                     trailingIcon = if (code == current) {
                         { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }

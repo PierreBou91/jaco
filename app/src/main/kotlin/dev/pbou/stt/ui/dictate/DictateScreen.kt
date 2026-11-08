@@ -113,6 +113,7 @@ import dev.pbou.stt.ui.components.IconTile
 import dev.pbou.stt.ui.components.MicButton
 import dev.pbou.stt.ui.choosableLanguages
 import dev.pbou.stt.ui.endonym
+import dev.pbou.stt.ui.languageLabel
 import dev.pbou.stt.ui.rememberNotificationPermission
 import dev.pbou.stt.ui.theme.TranscriptStyle
 import kotlinx.coroutines.launch
@@ -518,9 +519,9 @@ private fun ModelSheet(
                 ) {
                     choosable.forEach { code ->
                         FilterChip(
-                            selected = code == ui.settings.language,
+                            selected = code == ui.model?.let(ui.settings::languageFor),
                             onClick = { onSelectLanguage(code) },
-                            label = { Text(endonym(code)) },
+                            label = { Text(languageLabel(code, short = true)) },
                         )
                     }
                 }

@@ -60,6 +60,25 @@
                 android:resource="@xml/method" />
         </service>
 
+        <!-- Quick Settings tile: switch to the keyboard from any app. -->
+        <service
+            android:name=".keyboard.KeyboardTile"
+            android:exported="true"
+            android:icon="@drawable/ic_keyboard"
+            android:label="@string/kb_tile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <activity
+            android:name=".keyboard.KeyboardPickerActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Asks for the microphone on behalf of the keyboard. -->
         <activity
             android:name=".keyboard.MicPermissionActivity"

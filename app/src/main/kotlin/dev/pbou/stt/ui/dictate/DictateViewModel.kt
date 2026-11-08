@@ -92,7 +92,8 @@ class DictateViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun selectLanguage(code: String) {
         graph.live.stop()
-        viewModelScope.launch { graph.settingsRepo.update { it.copy(language = code) } }
+        val model = ui.value.model
+        viewModelScope.launch { graph.settingsRepo.update { it.withLanguage(code, model) } }
     }
 
     /** Clears the transcript and returns what was removed, for undo. */

@@ -264,8 +264,9 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
             val wasRunning = live.isRunning
             live.stop()
             lifecycleScope.launch {
-                graph.settingsRepo.update { it.copy(language = code) }
-                graph.settings.filterNotNull().first { it.language == code }
+                val model = graph.activeModel.value
+                graph.settingsRepo.update { it.withLanguage(code, model) }
+                graph.settings.filterNotNull().first { s -> model == null || s.languageFor(model) == code }
                 if (wasRunning) {
                     live.state.first { it.phase == LiveTranscriber.Phase.IDLE }
                     startListening()

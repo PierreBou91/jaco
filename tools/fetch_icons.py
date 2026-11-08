@@ -13,6 +13,7 @@ ICONS = """
 mic:fill stop:fill content_copy share delete download settings:fill deployed_code:fill expand_more close
 chevron_right info wifi error refresh more_vert language graphic_eq timer speed memory arrow_back tune
 pause play_arrow delete_sweep check check_circle:fill hard_drive star:fill bolt verified:fill
+audio_file folder_open
 """.split()
 
 BASE = "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/{n}/materialsymbolsrounded/{n}{v}_24px.svg"

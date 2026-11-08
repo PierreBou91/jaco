@@ -16,6 +16,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -33,6 +34,8 @@ import dev.pbou.stt.data.DownloadState
 import dev.pbou.stt.ui.bench.BenchScreen
 import dev.pbou.stt.ui.bench.BenchViewModel
 import dev.pbou.stt.ui.dictate.DictateScreen
+import dev.pbou.stt.ui.file.FileScreen
+import dev.pbou.stt.ui.file.FileViewModel
 import dev.pbou.stt.ui.dictate.DictateViewModel
 import dev.pbou.stt.ui.models.ModelsScreen
 import dev.pbou.stt.ui.models.ModelsViewModel
@@ -48,6 +51,7 @@ private enum class Tab(val route: String, @StringRes val label: Int, @DrawableRe
 
 private const val LICENSES = "licenses"
 private const val BENCH = "bench"
+private const val FILE = "file"
 
 @Composable
 fun SttAppUi(graph: AppGraph) {
@@ -61,6 +65,11 @@ fun SttAppUi(graph: AppGraph) {
         popUpTo(nav.graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+
+    // A file shared to the app: show it being transcribed.
+    LaunchedEffect(Unit) {
+        for (request in graph.showFile) nav.navigate(FILE) { launchSingleTop = true }
     }
 
     Scaffold(
@@ -93,13 +102,16 @@ fun SttAppUi(graph: AppGraph) {
             exitTransition = { fadeOut(tween(180)) },
         ) {
             composable(Tab.DICTATE.route) {
-                DictateScreen(viewModel { DictateViewModel(graph) }, onManageModels = { go(Tab.MODELS) })
+                DictateScreen(viewModel { DictateViewModel(graph) }, onManageModels = { go(Tab.MODELS) }, onOpenFile = { nav.navigate(FILE) })
             }
             composable(Tab.MODELS.route) {
                 ModelsScreen(viewModel { ModelsViewModel(graph) }, onBenchmark = { nav.navigate(BENCH) })
             }
             composable(Tab.SETTINGS.route) {
                 SettingsScreen(viewModel { SettingsViewModel(graph) }, onLicenses = { nav.navigate(LICENSES) }, onBenchmark = { nav.navigate(BENCH) })
+            }
+            composable(FILE) {
+                FileScreen(viewModel { FileViewModel(graph) }, onBack = { nav.popBackStack() }, onManageModels = { go(Tab.MODELS) })
             }
             composable(BENCH) {
                 BenchScreen(viewModel { BenchViewModel(graph) }, onBack = { nav.popBackStack() })

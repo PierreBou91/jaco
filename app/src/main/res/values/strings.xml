@@ -202,4 +202,23 @@
     <string name="bench_failed">%1$s could not finish: %2$s</string>
     <string name="wait_estimate">About %1$s s wait after each sentence</string>
     <string name="wait_measured">On your voice: %1$s %% word errors · %2$s s wait after each sentence</string>
+
+    <!-- Transcribe a file -->
+    <string name="share_target">Transcribe</string>
+    <string name="file_title">Transcribe a file</string>
+    <string name="file_action_choose">Choose a file</string>
+    <string name="file_empty_title">Transcribe a recording</string>
+    <string name="file_empty_body">Share a voice note, a recording or a video to Jaco from any app, or choose a file here. It is transcribed on the phone.</string>
+    <string name="file_opening">Opening the file…</string>
+    <string name="file_progress">Transcribing: %1$s of %2$s</string>
+    <string name="file_progress_unknown">Transcribing: %1$s</string>
+    <string name="file_stop">Stop</string>
+    <string name="file_stopped">Stopped at %1$s.</string>
+    <string name="file_restart">Start again</string>
+    <string name="file_done_seconds">Transcribed in %1$d s</string>
+    <string name="file_done_minutes">Transcribed in %1$d min %2$d s</string>
+    <string name="file_no_speech">No speech found in this file.</string>
+    <string name="file_unreadable">This file could not be read. Voice notes, MP3, M4A, WAV, OGG and Opus files work, as well as most videos.</string>
+    <string name="file_no_model">Download a model first.</string>
+    <string name="file_engine_error">The model stopped with an error.</string>
 </resources>

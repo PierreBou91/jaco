@@ -194,4 +194,23 @@
     <string name="bench_failed">%1$s n\'a pas pu terminer : %2$s</string>
     <string name="wait_estimate">Environ %1$s s d\'attente après chaque phrase</string>
     <string name="wait_measured">Sur votre voix : %1$s %% de mots erronés · %2$s s d\'attente après chaque phrase</string>
+
+    <!-- Transcribe a file -->
+    <string name="share_target">Transcrire</string>
+    <string name="file_title">Transcrire un fichier</string>
+    <string name="file_action_choose">Choisir un fichier</string>
+    <string name="file_empty_title">Transcrire un enregistrement</string>
+    <string name="file_empty_body">Partagez une note vocale, un enregistrement ou une vidéo vers Jaco depuis n\'importe quelle application, ou choisissez un fichier ici. La transcription se fait sur le téléphone.</string>
+    <string name="file_opening">Ouverture du fichier…</string>
+    <string name="file_progress">Transcription : %1$s sur %2$s</string>
+    <string name="file_progress_unknown">Transcription : %1$s</string>
+    <string name="file_stop">Arrêter</string>
+    <string name="file_stopped">Arrêté à %1$s.</string>
+    <string name="file_restart">Recommencer</string>
+    <string name="file_done_seconds">Transcrit en %1$d s</string>
+    <string name="file_done_minutes">Transcrit en %1$d min %2$d s</string>
+    <string name="file_no_speech">Aucune parole trouvée dans ce fichier.</string>
+    <string name="file_unreadable">Impossible de lire ce fichier. Les notes vocales, les fichiers MP3, M4A, WAV, OGG et Opus fonctionnent, ainsi que la plupart des vidéos.</string>
+    <string name="file_no_model">Téléchargez d\'abord un modèle.</string>
+    <string name="file_engine_error">Le modèle s\'est arrêté sur une erreur.</string>
 </resources>

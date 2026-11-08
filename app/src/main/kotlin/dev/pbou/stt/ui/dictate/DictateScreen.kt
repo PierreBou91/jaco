@@ -117,7 +117,7 @@ import dev.pbou.stt.ui.theme.TranscriptStyle
 import kotlinx.coroutines.launch
 
 @Composable
-fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit) {
+fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit, onOpenFile: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val level by vm.level.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -182,6 +182,9 @@ fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit) {
                 },
                 actions = {
                     if (ui.model != null) {
+                        IconButton(onClick = onOpenFile) {
+                            Icon(painterResource(R.drawable.ic_audio_file), contentDescription = stringResource(R.string.file_title))
+                        }
                         IconButton(
                             enabled = ui.hasText,
                             onClick = {
@@ -217,11 +220,11 @@ fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit) {
                         level = { level },
                         onMic = onMic,
                         onCopy = {
-                            copy(context, ui.live.text)
+                            copyText(context, ui.live.text)
                             // Android 13+ shows its own confirmation for the clipboard.
                             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) scope.launch { snackbar.showSnackbar(copied) }
                         },
-                        onShare = { share(context, ui.live.text) },
+                        onShare = { shareText(context, ui.live.text) },
                     )
                 }
             }
@@ -594,11 +597,11 @@ private fun LanguageNote(model: ModelSpec, ui: DictateUi) {
     )
 }
 
-private fun copy(context: Context, text: String) {
+internal fun copyText(context: Context, text: String) {
     context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_label), text))
 }
 
-private fun share(context: Context, text: String) {
+internal fun shareText(context: Context, text: String) {
     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
     context.startActivity(Intent.createChooser(send, null))
 }

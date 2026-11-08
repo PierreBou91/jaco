@@ -113,6 +113,12 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
     /** A voice panel is short: never take the whole screen in landscape. */
     override fun onEvaluateFullscreenMode() = false
 
+    override fun onStartInput(attribute: EditorInfo, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        // Just chosen from the Control Centre button: open in the field without a second tap on it.
+        if (attribute.inputType != InputType.TYPE_NULL && KeyboardSwitch.takeShowRequest()) requestShowSelf(0)
+    }
+
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         idleRelease?.cancel()
@@ -305,7 +311,10 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
         }
 
         override fun switchKeyboard() {
-            if (!switchToPreviousInputMethod()) pickKeyboard()
+            // Back to the keyboard Jaco was opened from, else the system's idea of the previous one.
+            val previous = KeyboardSwitch.previous(this@JacoKeyboard)
+            if (previous != null) switchInputMethod(previous)
+            else if (!switchToPreviousInputMethod()) pickKeyboard()
         }
 
         override fun pickKeyboard() {

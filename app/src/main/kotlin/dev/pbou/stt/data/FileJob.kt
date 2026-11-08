@@ -51,7 +51,7 @@ class FileJob(
     private val context: Context,
     private val scope: CoroutineScope,
     private val transcriber: FileTranscriber,
-    /** The model to use for a new file: the dictation model (null if none is installed). */
+    /** The model to use for a new file: the one set for files, else the dictation model (null if none is installed). */
     private val defaultModel: suspend () -> ModelSpec?,
     /** The language of a new file for this model: the one in the settings ("auto" or a code). */
     private val defaultLanguage: suspend (ModelSpec?) -> String,
@@ -65,7 +65,7 @@ class FileJob(
     private val dir = File(context.cacheDir, "shared")
     private val input = File(dir, "input")
 
-    /** Copies [uri] into the cache, then transcribes it with the dictation model. */
+    /** Copies [uri] into the cache, then transcribes it with the model for files. */
     fun open(uri: Uri) {
         val previous = job
         previous?.cancel()

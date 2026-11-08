@@ -10,6 +10,18 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Optional, never granted by installing: given once from a computer
+         (adb shell pm grant dev.pbou.stt android.permission.WRITE_SECURE_SETTINGS), it lets the
+         Control Centre button switch keyboards in one tap instead of opening the keyboard list. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
+
+    <!-- To see the other keyboards (Android hides other apps by default): the keyboard switch key and the
+         one-tap tile go back to the keyboard Jaco was opened from. -->
+    <queries>
+        <intent>
+            <action android:name="android.view.InputMethod" />
+        </intent>
+    </queries>
 
     <application
         android:name=".SttApplication"

@@ -128,17 +128,18 @@
     <string name="settings_about">À propos</string>
     <string name="setting_language">Langue parlée</string>
     <string name="setting_language_help">Pour les modèles à qui il faut indiquer la langue, comme Cohere. Ceux qui la détectent tout seuls, comme Parakeet, ignorent ce réglage\u00A0: avec eux, vous pouvez mélanger les langues.</string>
+    <string name="setting_file_model">Modèle pour les fichiers</string>
+    <string name="setting_file_model_same">Comme la dictée (%1$s)</string>
+    <string name="setting_file_model_same_option">Comme la dictée</string>
+    <string name="setting_file_model_told">Langue indiquée\u00A0: %1$s</string>
+    <string name="setting_file_model_help">Pour les messages vocaux et les enregistrements, souvent rapides ou bruités. Un modèle à qui l\'on indique la langue ne répond jamais dans une autre\u00A0; Parakeet, qui la détecte, répond parfois en anglais.</string>
     <string name="setting_pause">Fin de phrase</string>
     <string name="setting_pause_summary">Une phrase se termine après %1$s s de silence.</string>
     <string name="setting_preview">Afficher les mots pendant la dictée</string>
     <string name="setting_preview_summary">Consomme un peu plus de batterie.</string>
     <string name="setting_threads">Cœurs du processeur</string>
     <string name="setting_threads_summary">Le nombre de cœurs sur lesquels le modèle travaille en même temps.</string>
-    <plurals name="setting_threads_best">
-        <item quantity="one">%1$d est sans doute le plus rapide. Ce téléphone a %1$d cœur rapide ; au-delà, ses cœurs plus lents freinent les autres.</item>
-        <item quantity="other">%1$d est sans doute le plus rapide. Ce téléphone a %1$d cœurs rapides ; au-delà, ses cœurs plus lents freinent les autres.</item>
-    </plurals>
-    <string name="setting_threads_best_all">Tous les cœurs de ce téléphone vont à la même vitesse : en utiliser plus va souvent plus vite, mais chauffe le téléphone.</string>
+    <string name="setting_threads_best">%1$d est sans doute le plus rapide sur ce téléphone. Au-delà, les calculs attendent les cœurs plus lents et se gênent entre eux\u00A0: plus va moins vite.</string>
     <string name="setting_keep_loaded">Garder le modèle prêt</string>
     <string name="setting_keep_loaded_summary">La dictée démarre tout de suite, mais le modèle reste en mémoire.</string>
     <string name="setting_wifi_only">Télécharger en Wi-Fi uniquement</string>
@@ -243,4 +244,7 @@
     <string name="setting_kb_tile">Bouton des réglages rapides</string>
     <string name="setting_kb_tile_summary">Passez à Jaco depuis n\'importe quelle app, même si votre clavier n\'a pas de touche pour changer de clavier\u00A0: déroulez le volet des notifications et touchez le bouton.</string>
     <string name="setting_kb_tile_manual">Ajoutez-le depuis le mode édition du volet des notifications.</string>
+    <string name="setting_kb_one_tap">Bascule en un geste</string>
+    <string name="setting_kb_one_tap_on">Activée\u00A0: la tuile passe directement à Jaco, et revient à votre clavier.</string>
+    <string name="setting_kb_one_tap_off">Désactivée\u00A0: la tuile ouvre la liste des claviers. Pour basculer en un geste, Jaco a besoin d\'une autorisation que seul un ordinateur peut donner, une fois. Touchez pour copier la commande adb.</string>
 </resources>

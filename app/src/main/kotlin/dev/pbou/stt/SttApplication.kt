@@ -61,7 +61,7 @@ class AppGraph(app: Application) {
     val benchmark = Benchmark(host)
     val files = FileJob(
         app, scope, FileTranscriber(app.assets, host),
-        defaultModel = { dictationModel(settings.filterNotNull().first()) },
+        defaultModel = { fileModel(settings.filterNotNull().first()) },
         defaultLanguage = { spec -> settings.filterNotNull().first().let { s -> spec?.let(s::languageFor) ?: s.language } },
         optionsFor = { spec, language ->
             val s = settings.filterNotNull().first()
@@ -97,6 +97,10 @@ class AppGraph(app: Application) {
         val installed = store.installed.value
         return ModelCatalog.byId(s.defaultModelId)?.takeIf { it.id in installed } ?: ModelCatalog.all.firstOrNull { it.id in installed }
     }
+
+    /** The model for files: the one chosen for files if installed, else the dictation model. */
+    fun fileModel(s: AppSettings): ModelSpec? =
+        ModelCatalog.byId(s.fileModelId)?.takeIf { it.id in store.installed.value } ?: dictationModel(s)
 
     fun options(spec: ModelSpec, s: AppSettings, language: String = s.languageFor(spec)) = EngineOptions(
         language = spec.effectiveLanguage(language, deviceLanguages()),

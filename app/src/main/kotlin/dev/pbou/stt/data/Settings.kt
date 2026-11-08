@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.map
 data class AppSettings(
     /** The model chosen by the user; if it is not installed, the first installed model is used. */
     val defaultModelId: String? = null,
+    /** The model for files (voice notes, recordings); null means the dictation model. */
+    val fileModelId: String? = null,
     /**
      * The language spoken (ISO 639-1), for the models that must be told it. Models that detect the
      * language by themselves ignore it. There is no "detect" choice: it would only mean "English" for
@@ -67,8 +69,8 @@ data class AppSettings(
         /** Every core can be chosen. */
         val THREADS: List<Int> get() = (1..Cpu.cores).toList()
 
-        /** Likely the fastest: one thread per fast core (see [Cpu]). */
-        val recommendedThreads: Int get() = Cpu.fastCores
+        /** Likely the fastest (see [Cpu.bestThreads]). */
+        val recommendedThreads: Int get() = Cpu.bestThreads
         const val PAUSE_MIN = 0.3f
         const val PAUSE_MAX = 1.5f
     }
@@ -80,6 +82,7 @@ class SettingsRepository(private val context: Context) {
 
     private object Keys {
         val model = stringPreferencesKey("default_model")
+        val fileModel = stringPreferencesKey("file_model")
         val language = stringPreferencesKey("language")
         val autoDetect = booleanPreferencesKey("auto_detect")
         val pause = floatPreferencesKey("pause_seconds")
@@ -97,6 +100,7 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { prefs ->
             val s = transform(read(prefs))
             if (s.defaultModelId == null) prefs.remove(Keys.model) else prefs[Keys.model] = s.defaultModelId
+            if (s.fileModelId == null) prefs.remove(Keys.fileModel) else prefs[Keys.fileModel] = s.fileModelId
             prefs[Keys.language] = s.language
             prefs[Keys.autoDetect] = s.autoDetect
             prefs[Keys.pause] = s.pauseSeconds
@@ -113,6 +117,7 @@ class SettingsRepository(private val context: Context) {
         val d = AppSettings(language = AppSettings.defaultLanguage())
         return AppSettings(
             defaultModelId = p[Keys.model],
+            fileModelId = p[Keys.fileModel],
             // A former "auto" becomes the default too.
             language = p[Keys.language]?.takeIf { it in AppSettings.LANGUAGES } ?: d.language,
             autoDetect = p[Keys.autoDetect] ?: d.autoDetect,

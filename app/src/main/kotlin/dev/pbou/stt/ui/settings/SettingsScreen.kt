@@ -3,6 +3,8 @@
 package dev.pbou.stt.ui.settings
 
 import android.app.StatusBarManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
@@ -10,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -56,7 +59,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -71,6 +73,8 @@ import dev.pbou.stt.R
 import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.ModelCatalog
+import dev.pbou.stt.engine.ModelSpec
+import dev.pbou.stt.keyboard.KeyboardSwitch
 import dev.pbou.stt.keyboard.KeyboardTile
 import dev.pbou.stt.ui.components.SectionHeader
 import dev.pbou.stt.ui.endonym
@@ -79,6 +83,8 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
     val settings = graph.settings
+    val dictationModel = graph.activeModel
+    val installed = graph.store.installed
 
     fun update(transform: (AppSettings) -> AppSettings) {
         val before = graph.settings.value ?: return
@@ -96,10 +102,18 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
     val s = vm.settings.collectAsStateWithLifecycle().value ?: return
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     var languageDialog by rememberSaveable { mutableStateOf(false) }
+    var fileModelDialog by rememberSaveable { mutableStateOf(false) }
+    val dictationModel = vm.dictationModel.collectAsStateWithLifecycle().value
+    val installed = vm.installed.collectAsStateWithLifecycle().value.let { ids -> ModelCatalog.all.filter { it.id in ids } }
+    val fileModel = installed.firstOrNull { it.id == s.fileModelId }
     // Whether the keyboard is turned on in the phone's settings: checked again on coming back from them.
     val context = LocalContext.current
     var keyboardEnabled by remember { mutableStateOf(isKeyboardEnabled(context)) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { keyboardEnabled = isKeyboardEnabled(context) }
+    var oneTap by remember { mutableStateOf(KeyboardSwitch.canSwitchDirectly(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        keyboardEnabled = isKeyboardEnabled(context)
+        oneTap = KeyboardSwitch.canSwitchDirectly(context)
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -118,6 +132,7 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
             item { SectionHeader(stringResource(R.string.settings_keyboard)) }
             item { KeyboardSetting(enabled = keyboardEnabled) }
             item { TileSetting() }
+            item { OneTapSetting(granted = oneTap) }
             item {
                 SwitchItem(
                     title = stringResource(R.string.setting_kb_autostart),
@@ -134,6 +149,14 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
                     summary = endonym(s.language),
                     icon = R.drawable.ic_language,
                     onClick = { languageDialog = true },
+                )
+            }
+            if (installed.size > 1 || fileModel != null) item {
+                Item(
+                    title = stringResource(R.string.setting_file_model),
+                    summary = fileModel?.name ?: stringResource(R.string.setting_file_model_same, dictationModel?.name.orEmpty()),
+                    icon = R.drawable.ic_audio_file,
+                    onClick = { fileModelDialog = true },
                 )
             }
             item { PauseSetting(s.pauseSeconds) { v -> vm.update { it.copy(pauseSeconds = v) } } }
@@ -205,6 +228,12 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
         }
     }
 
+    if (fileModelDialog) {
+        FileModelDialog(s, installed, current = fileModel, onDismiss = { fileModelDialog = false }) { spec ->
+            vm.update { it.copy(fileModelId = spec?.id) }
+            fileModelDialog = false
+        }
+    }
     if (languageDialog) {
         LanguageDialog(current = s.language, onDismiss = { languageDialog = false }) { code ->
             vm.update { it.copy(language = code) }
@@ -280,8 +309,7 @@ private fun ThreadsSetting(value: Int, onChange: (Int) -> Unit) {
                 }
                 // Why the default is not the biggest number.
                 Text(
-                    if (best < choices.size) pluralStringResource(R.plurals.setting_threads_best, best, best)
-                    else stringResource(R.string.setting_threads_best_all),
+                    stringResource(R.string.setting_threads_best, best),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (value == best) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 8.dp),
@@ -321,6 +349,30 @@ private fun requestTile(context: Context) {
     ) { }
 }
 
+/**
+ * The tile can switch keyboards in one tap with a permission no app can get by itself (it can only be
+ * given from a computer). Without it, the tile opens the keyboard list, which works for everyone.
+ */
+@Composable
+private fun OneTapSetting(granted: Boolean) {
+    val context = LocalContext.current
+    Item(
+        title = stringResource(R.string.setting_kb_one_tap),
+        summary = stringResource(if (granted) R.string.setting_kb_one_tap_on else R.string.setting_kb_one_tap_off),
+        icon = if (granted) R.drawable.ic_check_circle else R.drawable.ic_content_copy,
+        onClick = if (granted) null else {
+            {
+                val command = "adb shell pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS"
+                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("adb", command))
+                // Android 13+ confirms copies itself.
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
+                }
+            }
+        },
+    )
+}
+
 /** Off: opens the phone's keyboard list to turn it on. On: opens the keyboard picker, to try it. */
 @Composable
 private fun KeyboardSetting(enabled: Boolean) {
@@ -337,6 +389,51 @@ private fun KeyboardSetting(enabled: Boolean) {
             }
         },
     )
+}
+
+/** "Same as dictation", then each installed model, with how it gets the language. */
+@Composable
+private fun FileModelDialog(s: AppSettings, installed: List<ModelSpec>, current: ModelSpec?, onDismiss: () -> Unit, onSelect: (ModelSpec?) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.setting_file_model)) },
+        text = {
+            Column(Modifier.selectableGroup().verticalScroll(rememberScrollState())) {
+                Text(
+                    stringResource(R.string.setting_file_model_help),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                RadioRow(stringResource(R.string.setting_file_model_same_option), null, selected = current == null) { onSelect(null) }
+                installed.forEach { spec ->
+                    val language = s.languageFor(spec)
+                    val note = if (spec.effectiveLanguage(language, listOf(s.language)) == null) stringResource(R.string.language_detected)
+                        else stringResource(R.string.setting_file_model_told, endonym(s.language))
+                    RadioRow(spec.name, note, selected = spec == current) { onSelect(spec) }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
+    )
+}
+
+@Composable
+private fun RadioRow(title: String, note: String?, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Spacer(Modifier.width(16.dp))
+        Column {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (note != null) Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable

@@ -136,17 +136,18 @@
     <string name="settings_about">About</string>
     <string name="setting_language">Spoken language</string>
     <string name="setting_language_help">For the models that must be told the language, like Cohere. Models that detect it by themselves, like Parakeet, ignore this setting: you can mix languages with them.</string>
+    <string name="setting_file_model">Model for files</string>
+    <string name="setting_file_model_same">Same as dictation (%1$s)</string>
+    <string name="setting_file_model_same_option">Same as dictation</string>
+    <string name="setting_file_model_told">Told the language: %1$s</string>
+    <string name="setting_file_model_help">For voice notes and recordings, often fast or noisy. A model that is told the language never answers in another one; Parakeet, which detects it, sometimes answers in English.</string>
     <string name="setting_pause">End of a sentence</string>
     <string name="setting_pause_summary">A sentence ends after %1$s s of silence.</string>
     <string name="setting_preview">Show words while speaking</string>
     <string name="setting_preview_summary">Uses a little more battery.</string>
     <string name="setting_threads">Processor cores</string>
     <string name="setting_threads_summary">How many cores the model works on at once.</string>
-    <plurals name="setting_threads_best">
-        <item quantity="one">%1$d is likely the fastest. This phone has %1$d fast core; past that, its slower cores hold the others back.</item>
-        <item quantity="other">%1$d is likely the fastest. This phone has %1$d fast cores; past that, its slower cores hold the others back.</item>
-    </plurals>
-    <string name="setting_threads_best_all">All the cores of this phone run at the same speed: using more is usually faster, but warms the phone.</string>
+    <string name="setting_threads_best">%1$d is likely the fastest on this phone. Past that, the work waits for the slower cores and gets in its own way: more is slower.</string>
     <string name="setting_keep_loaded">Keep the model ready</string>
     <string name="setting_keep_loaded_summary">Dictation starts instantly, but the model stays in memory.</string>
     <string name="setting_wifi_only">Download on Wi-Fi only</string>
@@ -251,4 +252,7 @@
     <string name="setting_kb_tile">Quick Settings tile</string>
     <string name="setting_kb_tile_summary">Switch to Jaco from any app, even if your keyboard has no switch key: pull down the notification shade and tap the tile.</string>
     <string name="setting_kb_tile_manual">Add it from the edit mode of the notification shade.</string>
+    <string name="setting_kb_one_tap">One-tap switch</string>
+    <string name="setting_kb_one_tap_on">On: the tile switches straight to Jaco, and back to your keyboard.</string>
+    <string name="setting_kb_one_tap_off">Off: the tile opens the keyboard list. To switch in one tap, Jaco needs a permission that only a computer can give, once. Tap to copy the adb command.</string>
 </resources>

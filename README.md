@@ -18,7 +18,8 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
 - **Transcribe a file** (M1): share a voice note, recording or video to the app ("Transcribe" in the share
   sheet, or "Open with"), or pick one. Decoded with Android's codecs (Opus/OGG, M4A/AAC, MP3, WAV, video
   sound...), resampled to 16 kHz, cut at pauses and transcribed sentence by sentence with timestamps.
-  Streams, so long files are not held in memory; another model can be picked to transcribe it again.
+  Streams, so long files are not held in memory; another model can be picked to transcribe it again. Files
+  can use their own model (Settings > Model for files), e.g. one told the language for casual voice notes.
 - **Benchmark** (M1): read six sentences (French or English) once; every installed model then transcribes
   them on the phone. Shows word errors, the wait after each sentence, speed and load time, with the
   transcripts. Model cards show your measured result, or an estimated wait from the reference benchmark.
@@ -29,7 +30,11 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   keyboards whose microphone key opens one (AOSP, HeliBoard). Frees the model 5 minutes after last use.
   A Quick Settings tile opens the keyboard chooser from any app: SwiftKey has no key to switch keyboards
   and its voice typing only accepts Google's recognisers, and gesture navigation hides the system's button.
-- **Settings**: keyboard, language, end-of-sentence pause, live preview, CPU threads, keep the model in memory, timings.
+  Jaco then opens in the field by itself. With a permission given once from a computer
+  (`adb shell pm grant dev.pbou.stt android.permission.WRITE_SECURE_SETTINGS`), the tile switches in one
+  tap, to Jaco and back.
+- **Settings**: keyboard, language, model for files, end-of-sentence pause, live preview, CPU cores (defaults
+  to the count measured fastest, usually 4: more cores is slower on phones), keep the model in memory, timings.
 - Dark theme with an orange accent, Inter font, English and French UI.
 
 ## Build
@@ -70,6 +75,8 @@ models from `~/models/stt` into the app.
 - **M3, the recorder**: long background recordings, timestamps, playback, history, search, export.
 - **M4, speakers**: diarization (who spoke when) on recordings.
 - Later: rewriting with a small local LLM, translation, call transcription research.
+
+Ideas parked for later and loose ends: [docs/backlog.md](docs/backlog.md).
 
 ## Licences
 

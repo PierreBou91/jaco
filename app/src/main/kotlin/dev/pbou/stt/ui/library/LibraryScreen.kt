@@ -2,12 +2,6 @@
 
 package dev.pbou.stt.ui.library
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -39,17 +32,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,49 +47,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pbou.stt.R
 import dev.pbou.stt.data.LibraryItem
 import dev.pbou.stt.data.LibraryText
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.RecordingSession
+import dev.pbou.stt.ui.bytes
 import dev.pbou.stt.ui.components.IconTile
-import kotlinx.coroutines.launch
 
 @Composable
 fun LibraryScreen(vm: LibraryViewModel, onOpen: (String) -> Unit, onFile: () -> Unit, onManageModels: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
-    val micDenied = stringResource(R.string.mic_permission_denied)
-    val noModel = stringResource(R.string.rec_no_model)
-
-    fun record() = scope.launch {
-        when (val id = vm.startRecording()) {
-            null -> snackbar.showSnackbar(noModel)
-            else -> onOpen(id)
-        }
-    }
-    // The notification shows the recording's time and its buttons: ask for it with the microphone.
-    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { record() }
-    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        when {
-            !granted -> scope.launch { snackbar.showSnackbar(micDenied) }
-            needsNotificationPermission(context) -> askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-            else -> record()
-        }
-    }
-    fun onRecord() = when {
-        !has(context, Manifest.permission.RECORD_AUDIO) -> askMic.launch(Manifest.permission.RECORD_AUDIO)
-        needsNotificationPermission(context) -> askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-        else -> { record(); Unit }
-    }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.nav_library)) },
@@ -113,23 +73,12 @@ fun LibraryScreen(vm: LibraryViewModel, onOpen: (String) -> Unit, onFile: () -> 
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
         },
-        floatingActionButton = {
-            if (ui.recording == null && ui.hasModel) {
-                ExtendedFloatingActionButton(
-                    onClick = ::onRecord,
-                    icon = { Icon(painterResource(R.drawable.ic_fiber_manual_record_fill), contentDescription = null) },
-                    text = { Text(stringResource(R.string.rec_start)) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (ui.empty) {
-                Empty(hasModel = ui.hasModel, onRecord = ::onRecord, onFile = onFile, onManageModels = onManageModels)
+                Empty(hasModel = ui.hasModel, onFile = onFile, onManageModels = onManageModels)
             } else {
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                     ui.recording?.let { r ->
                         item(key = "recording") { RecordingCard(r, onClick = { onOpen(r.itemId) }) }
                     }
@@ -148,6 +97,13 @@ fun LibraryScreen(vm: LibraryViewModel, onOpen: (String) -> Unit, onFile: () -> 
                             shape = RoundedCornerShape(28.dp),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                         )
+                        // Audio is kept by default: show what it costs (an item's menu can delete it).
+                        if (ui.audioBytes > 0) Text(
+                            stringResource(R.string.lib_audio_space, bytes(ui.audioBytes)),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                        )
                     }
                     if (ui.rows.isEmpty()) item(key = "none") {
                         Text(
@@ -164,12 +120,6 @@ fun LibraryScreen(vm: LibraryViewModel, onOpen: (String) -> Unit, onFile: () -> 
         }
     }
 }
-
-private fun has(context: Context, permission: String) =
-    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-
-private fun needsNotificationPermission(context: Context) =
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !has(context, Manifest.permission.POST_NOTIFICATIONS)
 
 @Composable
 private fun RecordingCard(r: LibraryUi.Recording, onClick: () -> Unit) {
@@ -256,7 +206,7 @@ internal fun status(item: LibraryItem, improving: Float?): String? = when {
 internal fun modelName(id: String?): String = ModelCatalog.byId(id)?.name ?: id.orEmpty()
 
 @Composable
-private fun Empty(hasModel: Boolean, onRecord: () -> Unit, onFile: () -> Unit, onManageModels: () -> Unit) {
+private fun Empty(hasModel: Boolean, onFile: () -> Unit, onManageModels: () -> Unit) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
         verticalArrangement = Arrangement.Center,
@@ -274,12 +224,6 @@ private fun Empty(hasModel: Boolean, onRecord: () -> Unit, onFile: () -> Unit, o
         )
         Spacer(Modifier.height(28.dp))
         if (hasModel) {
-            Button(onClick = onRecord) {
-                Icon(painterResource(R.drawable.ic_fiber_manual_record_fill), contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.rec_start))
-            }
-            Spacer(Modifier.height(12.dp))
             OutlinedButton(onClick = onFile) {
                 Icon(painterResource(R.drawable.ic_audio_file), contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))

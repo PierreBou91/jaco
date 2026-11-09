@@ -17,6 +17,15 @@ one gets decided when its time comes.
   fully offline replacement for SwiftKey. Big job, see the discussion of 2026-11-08: the hard part is typing
   quality (autocorrect, prediction, swipe), not the plumbing.
 
+## Fixing transcription mistakes (with the full keyboard)
+
+Correcting a wrong word today means switching keyboards. To design together with the full keyboard:
+- **Personal vocabulary** (Pierre likes this one): words Jaco often gets wrong and what they should be (names,
+  jargon, "Jako" to "Jaco"), applied everywhere: keyboard, home, recordings. Maybe also as hints to models
+  that accept them (hotwords).
+- **Edit a sentence** in a recording (long-press to correct it).
+- **Say it again**: a keyboard key that deletes the last sentence and listens again.
+
 ## Loose ends
 
 - **Whisper "Auto"** has only been checked by unit tests: no Whisper model has been installed on a phone.
@@ -30,6 +39,6 @@ one gets decided when its time comes.
 - **Thread benchmark**: one pass on the Galaxy Z Flip6, so heat may have slowed the high thread counts a
   little. Run `ThreadsBenchmark` with `-e passes 2` on new phones before trusting a single run.
 - **Recorder, not yet checked on a phone**: waiting for the charger before improving (the test phone was
-  plugged in, so it ran at once); an improvement stepping aside when dictation starts; the notification's
-  own Pause and Stop buttons (the screen's buttons are checked); dictating while a recording runs (both
-  share the microphone); a file transcribed with "Keep the audio" on.
+  always plugged in); the notification's own Pause and Stop buttons (the screen's buttons are checked); the
+  live words on the home screen with real speech (the test room was silent); a file transcribed with "Keep
+  the audio" on; dictating with the keyboard while a session records (both share the microphone).

@@ -17,10 +17,11 @@ import java.nio.ByteOrder
  * recording cut short (crash, empty battery) is still readable up to its last frame. [toM4a] puts the
  * frames in an M4A file, the format every player and phone opens, once the recording is over.
  *
- * Not thread-safe: call [write] and [close] from one thread.
+ * Not thread-safe: call [write] and [close] from one thread. With [append], new frames go after the
+ * existing ones (continuing a recording: ADTS frames simply follow each other).
  */
-class AacWriter(file: File, bitrate: Int = BITRATE) : Closeable {
-    private val out = BufferedOutputStream(FileOutputStream(file))
+class AacWriter(file: File, bitrate: Int = BITRATE, append: Boolean = false) : Closeable {
+    private val out = BufferedOutputStream(FileOutputStream(file, append))
     private val codec: MediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
     private val info = MediaCodec.BufferInfo()
     private var samplesIn = 0L
@@ -132,6 +133,38 @@ class AacWriter(file: File, bitrate: Int = BITRATE) : Closeable {
                 (((length and 7) shl 5) or 0x1F).toByte(),
                 0xFC.toByte(),
             )
+        }
+
+        /**
+         * The reverse of [toM4a], to continue a finished recording: copies the frames of an M4A written by
+         * [toM4a] back into an ADTS file. Fails if the audio is not 16 kHz mono AAC (not one of ours).
+         */
+        fun toAdts(m4a: File, aac: File) {
+            val extractor = MediaExtractor()
+            try {
+                extractor.setDataSource(m4a.path)
+                require(extractor.trackCount > 0) { "no audio in ${m4a.name}" }
+                val format = extractor.getTrackFormat(0)
+                require(format.getString(MediaFormat.KEY_MIME) == MediaFormat.MIMETYPE_AUDIO_AAC) { "not AAC" }
+                require(format.getInteger(MediaFormat.KEY_SAMPLE_RATE) == SAMPLE_RATE) { "not 16 kHz" }
+                require(format.getInteger(MediaFormat.KEY_CHANNEL_COUNT) == 1) { "not mono" }
+                extractor.selectTrack(0)
+                val buffer = ByteBuffer.allocate(64 * 1024)
+                BufferedOutputStream(FileOutputStream(aac)).use { out ->
+                    while (true) {
+                        val n = extractor.readSampleData(buffer, 0)
+                        if (n < 0) break
+                        val frame = ByteArray(n)
+                        buffer.position(0)
+                        buffer.get(frame, 0, n)
+                        out.write(adtsHeader(n))
+                        out.write(frame)
+                        extractor.advance()
+                    }
+                }
+            } finally {
+                extractor.release()
+            }
         }
 
         /**

@@ -51,4 +51,13 @@ class LibraryTextTest {
         assert(s.contains("budget")) { s }
         assert(s.startsWith("…") && s.endsWith("…")) { s }
     }
+
+    @Test fun `a new version replaces the older ones of its model, never the live one`() {
+        val live = Transcript("parakeet", null, true, 0, segs)
+        val cohere1 = Transcript("cohere", "fr", false, 1, segs.take(1))
+        val canary = Transcript("canary", "fr", false, 2, segs)
+        val cohere2 = Transcript("cohere", "fr", false, 3, segs)
+        assertEquals(listOf(live, canary), listOf(live, cohere1, canary, cohere2).withoutOlder("cohere"))
+        assertEquals(listOf(live), listOf(live).withoutOlder("parakeet"))
+    }
 }

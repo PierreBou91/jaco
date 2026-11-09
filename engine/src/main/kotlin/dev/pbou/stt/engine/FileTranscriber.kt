@@ -49,8 +49,11 @@ class FileTranscriber(private val assets: AssetManager, private val host: Engine
                 suspend fun drain() {
                     while (!vad.empty()) {
                         val seg = vad.front()
-                        inFlight.incrementAndGet()
-                        sentences.send(seg.start to seg.samples)
+                        // Talk without pauses (a call) can make "sentences" of minutes: cut them (25 s at most).
+                        for ((at, piece) in SentenceSplitter.split(seg.samples)) {
+                            inFlight.incrementAndGet()
+                            sentences.send(seg.start + at to piece)
+                        }
                         vad.pop()
                     }
                 }

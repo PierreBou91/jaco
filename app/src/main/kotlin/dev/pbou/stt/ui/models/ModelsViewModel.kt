@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -108,7 +109,10 @@ class ModelsViewModel(private val graph: AppGraph) : ViewModel() {
             val loaded = graph.host.state.value
             val inMemory = (loaded as? EngineHost.State.Ready)?.spec ?: (loaded as? EngineHost.State.Loading)?.spec
             if (inMemory == spec) {
-                graph.live.stop()
+                // A recording or the keyboard using it ends first (what was said is kept).
+                graph.recorder.stop()
+                graph.keyboardLive.stop()
+                graph.recorder.itemId.first { it == null }
                 graph.host.release().join()
             }
             graph.store.delete(spec)

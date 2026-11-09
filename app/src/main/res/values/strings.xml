@@ -287,7 +287,7 @@
     <string name="lib_recording_open">Tap to open</string>
     <string name="lib_transcribing">Transcribing</string>
     <string name="lib_empty_title">Your recordings and files</string>
-    <string name="lib_empty_body">Record a meeting, a lecture or a note: it is transcribed as you speak, without internet. Files you transcribe are kept here too.</string>
+    <string name="lib_empty_body">Everything you dictate or record is kept here, searchable, with its times. Files you transcribe too.</string>
     <string name="lib_rename">Rename</string>
     <string name="lib_delete_title">Delete this item?</string>
     <string name="lib_delete_body">Its text and audio will be deleted from the phone.</string>
@@ -307,4 +307,15 @@
     <string name="player_play">Play</string>
     <string name="player_back">Back 10 seconds</string>
     <string name="player_forward">Forward 10 seconds</string>
+    <string name="rec_continue">Continue recording</string>
+    <string name="rec_cannot_continue">This recording cannot be continued right now.</string>
+    <string name="lib_copy_plain">Copy text only</string>
+    <string name="lib_delete_audio">Delete the audio</string>
+    <string name="lib_delete_audio_title">Delete the audio?</string>
+    <string name="lib_delete_audio_body">The text stays. Without the audio, it can no longer be played, shared as audio or transcribed again.</string>
+    <string name="lib_again_language">Language</string>
+    <string name="lib_audio_space">Audio: %1$s</string>
+    <string name="home_saved">Saved in the Library</string>
+    <string name="home_new">New page</string>
+    <string name="action_open">Open</string>
 </resources>

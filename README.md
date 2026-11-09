@@ -33,15 +33,18 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   Jaco then opens in the field by itself. With a permission given once from a computer
   (`adb shell pm grant dev.pbou.stt android.permission.WRITE_SECURE_SETTINGS`), the tile switches in one
   tap, to Jaco and back.
-- **Recorder and Library** (M3): a Library tab with every recording and transcribed file, newest first, with
-  search (accents and case ignored). Record a meeting or a lecture: each sentence is transcribed at its pause
-  with the dictation model and saved at once, in the background with a notification (pause, resume, stop),
-  screen off or in another app. No word-by-word preview while recording, to save battery over hours.
-  "Keep the audio" (off by default) saves it as M4A (AAC, 48 kbps, about 21 MB per hour), written so that a
-  crash or a dead battery loses nothing already recorded. With the audio: playback (tap a sentence to hear
-  it), share the audio, transcribe again with another model, and "Improve while charging": a bigger model
-  (e.g. Cohere) transcribes it again when the phone is plugged in; the live version stays one tap away.
-  Export as plain text or text with times. Rename, delete.
+- **Dictate and Library** (M3): one way to talk. The home mic starts a session that is saved in the Library like
+  any recording: words appear live while the screen shows them, and it goes on in the background (screen off,
+  another app) with a notification (pause, resume, stop), transcribing sentence by sentence without the live
+  preview to save battery over hours. The mic after a stop continues the same session; "New page" starts afresh.
+  Sentences are cut at pauses, and at the quietest moment if someone talks for over 25 s without one (calls).
+  The Library lists every session and transcribed file, newest first, with search (accents and case ignored)
+  and the space taken by audio. "Keep the audio" (on by default) saves it as M4A (AAC, 48 kbps, about 22 MB per
+  hour), written so that a crash or a dead battery loses nothing already recorded. A recording's screen keeps
+  pause and stop pinned at the bottom while recording; afterwards: playback (tap a sentence to hear it), copy
+  (with times by default, or text only), share (text, text with times, audio), continue recording, transcribe
+  again with another model and language, "Improve while charging" (a bigger model such as Cohere redoes it when
+  plugged in; the live version stays one tap away), delete the audio but keep the text, rename, delete.
 - **Settings**: keyboard, language, model for files, end-of-sentence pause, live preview, CPU cores (defaults
   to the count measured fastest, usually 4: more cores is slower on phones), keep the model in memory, timings.
 - Dark theme with an orange accent, Inter font, English and French UI.

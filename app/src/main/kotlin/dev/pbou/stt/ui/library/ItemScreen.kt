@@ -3,6 +3,13 @@
 package dev.pbou.stt.ui.library
 
 import android.os.Build
+import dev.pbou.stt.ui.languageLabel
+import dev.pbou.stt.ui.choosableLanguages
+import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.content.pm.PackageManager
+import android.Manifest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -77,7 +84,6 @@ import dev.pbou.stt.data.Transcript
 import dev.pbou.stt.engine.FileTranscriber
 import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.engine.RecordingSession
-import dev.pbou.stt.ui.components.MicButton
 import kotlinx.coroutines.launch
 
 @Composable
@@ -91,6 +97,13 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
     var renaming by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
     var again by rememberSaveable { mutableStateOf(false) }
+    var deletingAudio by rememberSaveable { mutableStateOf(false) }
+    val cannotContinue = stringResource(R.string.rec_cannot_continue)
+    val micDenied = stringResource(R.string.mic_permission_denied)
+    fun continueNow() = scope.launch { if (!vm.continueRecording()) snackbar.showSnackbar(cannotContinue) }
+    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) continueNow() else scope.launch { snackbar.showSnackbar(micDenied) }
+    }
 
     LaunchedEffect(ui.deleted) { if (ui.deleted) onBack() }
     val item = ui.item
@@ -99,11 +112,13 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
     DisposableEffect(Unit) { onDispose { vm.pausePlayer() } }
 
     val recording = ui.recording
+    WatchRecording(active = recording != null, onWatching = vm::watching)
     val segments = item?.transcript?.segments.orEmpty()
+    val partial = recording?.partial.orEmpty()
     val list = rememberLazyListState()
     // While recording, follow the new sentences.
-    LaunchedEffect(segments.size) {
-        if (recording != null && segments.isNotEmpty()) list.animateScrollToItem(list.layoutInfo.totalItemsCount - 1)
+    LaunchedEffect(segments.size, partial.isNotEmpty()) {
+        if (recording != null && list.layoutInfo.totalItemsCount > 0) list.animateScrollToItem(list.layoutInfo.totalItemsCount - 1)
     }
 
     Scaffold(
@@ -128,12 +143,19 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
                         MoreMenu(
                             hasText = segments.isNotEmpty(),
                             canTranscribeAgain = player.ready && ui.installed.isNotEmpty(),
-                            onCopy = {
-                                vm.copyText(context)
+                            canContinue = item.kind == LibraryItem.Kind.RECORDING && ui.installed.isNotEmpty(),
+                            hasAudio = item.audio != null,
+                            onCopy = { timestamps ->
+                                vm.copyText(context, timestamps)
                                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) scope.launch { snackbar.showSnackbar(copied) }
                             },
                             onRename = { renaming = true },
                             onAgain = { again = true },
+                            onContinue = {
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) continueNow()
+                                else askMic.launch(Manifest.permission.RECORD_AUDIO)
+                            },
+                            onDeleteAudio = { deletingAudio = true },
                             onDelete = { deleting = true },
                         )
                     }
@@ -142,25 +164,22 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
             )
         },
         bottomBar = {
-            if (player.ready && recording == null) {
-                PlayerBar(player, onToggle = vm::togglePlay, onSeek = vm::seek, onSkip = vm::skip)
+            when {
+                recording != null -> RecordingBar(recording, level = { vm.level.value }, onPause = vm::pause, onResume = vm::resume, onStop = vm::stop)
+                player.ready -> PlayerBar(player, onToggle = vm::togglePlay, onSeek = vm::seek, onSkip = vm::skip)
             }
         },
     ) { padding ->
         if (item == null) return@Scaffold
         LazyColumn(Modifier.fillMaxSize().padding(padding), state = list, contentPadding = PaddingValues(bottom = 24.dp)) {
             item(key = "header") {
-                if (recording != null) {
-                    RecordingHeader(recording, level = { vm.level.value }, onPause = vm::pause, onResume = vm::resume, onStop = vm::stop)
-                } else {
-                    Header(
-                        item = item,
-                        improving = ui.improving,
-                        onShow = vm::show,
-                        onImproveNow = vm::improveNow,
-                        onCancelImprove = vm::cancelImprove,
-                    )
-                }
+                Header(
+                    item = item,
+                    improving = ui.improving,
+                    onShow = vm::show,
+                    onImproveNow = vm::improveNow,
+                    onCancelImprove = vm::cancelImprove,
+                )
                 ui.recordingProblem?.let { problem ->
                     Problem(problem, onDismiss = vm::dismissProblem)
                 }
@@ -186,6 +205,7 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
                 val active = player.ready && (player.playing || player.positionMs > 0) && player.positionMs >= s.startMs && player.positionMs < next
                 SegmentRow(s, active = active, onClick = if (player.ready) ({ vm.playFrom(s.startMs) }) else null)
             }
+            if (partial.isNotEmpty()) item(key = "partial") { PartialRow(partial) }
         }
     }
 
@@ -201,45 +221,19 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
-    if (again && item != null) {
-        AgainDialog(ui.installed, current = item.transcript?.modelId, onDismiss = { again = false }) { spec ->
-            again = false
-            vm.transcribeAgain(spec)
-        }
-    }
-}
-
-@Composable
-private fun RecordingHeader(s: RecordingSession.State, level: () -> Float, onPause: () -> Unit, onResume: () -> Unit, onStop: () -> Unit) {
-    val finishing = s.phase == RecordingSession.Phase.FINISHING
-    val paused = s.phase == RecordingSession.Phase.PAUSED
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(LibraryText.clock(s.recordedMs), style = MaterialTheme.typography.displayMedium.copy(fontFeatureSettings = "tnum"))
-        Spacer(Modifier.height(4.dp))
-        Text(
-            when {
-                finishing -> stringResource(R.string.rec_finishing)
-                paused -> stringResource(R.string.rec_paused)
-                s.waiting > 1 -> stringResource(R.string.rec_waiting, s.waiting)
-                else -> stringResource(R.string.rec_recording)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+    if (deletingAudio) {
+        AlertDialog(
+            onDismissRequest = { deletingAudio = false },
+            title = { Text(stringResource(R.string.lib_delete_audio_title)) },
+            text = { Text(stringResource(R.string.lib_delete_audio_body)) },
+            confirmButton = { TextButton(onClick = { deletingAudio = false; vm.deleteAudio(context) }) { Text(stringResource(R.string.action_delete)) } },
+            dismissButton = { TextButton(onClick = { deletingAudio = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            FilledTonalIconButton(
-                onClick = if (paused) onResume else onPause,
-                enabled = !finishing,
-                modifier = Modifier.size(56.dp),
-            ) {
-                Icon(
-                    painterResource(if (paused) R.drawable.ic_fiber_manual_record_fill else R.drawable.ic_pause_fill),
-                    contentDescription = stringResource(if (paused) R.string.action_resume else R.string.action_pause),
-                )
-            }
-            MicButton(listening = !paused && !finishing, finishing = finishing, level = level, onClick = onStop, stopLabel = stringResource(R.string.rec_stop))
-            Spacer(Modifier.size(56.dp)) // balances the pause button, so the stop button stays centered
+    }
+    if (again && item != null) {
+        AgainDialog(ui.installed, current = item.transcript?.modelId, defaultLanguage = vm::defaultLanguage, onDismiss = { again = false }) { spec, language ->
+            again = false
+            vm.transcribeAgain(spec, language)
         }
     }
 }
@@ -398,17 +392,40 @@ private fun ShareMenu(hasText: Boolean, hasAudio: Boolean, onText: () -> Unit, o
 }
 
 @Composable
-private fun MoreMenu(hasText: Boolean, canTranscribeAgain: Boolean, onCopy: () -> Unit, onRename: () -> Unit, onAgain: () -> Unit, onDelete: () -> Unit) {
+private fun MoreMenu(
+    hasText: Boolean,
+    canTranscribeAgain: Boolean,
+    canContinue: Boolean,
+    hasAudio: Boolean,
+    onCopy: (timestamps: Boolean) -> Unit,
+    onRename: () -> Unit,
+    onAgain: () -> Unit,
+    onContinue: () -> Unit,
+    onDeleteAudio: () -> Unit,
+    onDelete: () -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.action_more))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            if (hasText) DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_copy)) },
-                leadingIcon = { Icon(painterResource(R.drawable.ic_content_copy), contentDescription = null) },
-                onClick = { open = false; onCopy() },
+            if (hasText) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_copy)) },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_content_copy), contentDescription = null) },
+                    onClick = { open = false; onCopy(true) },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.lib_copy_plain)) },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_notes), contentDescription = null) },
+                    onClick = { open = false; onCopy(false) },
+                )
+            }
+            if (canContinue) DropdownMenuItem(
+                text = { Text(stringResource(R.string.rec_continue)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_fiber_manual_record), contentDescription = null) },
+                onClick = { open = false; onContinue() },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.lib_rename)) },
@@ -419,6 +436,11 @@ private fun MoreMenu(hasText: Boolean, canTranscribeAgain: Boolean, onCopy: () -
                 text = { Text(stringResource(R.string.lib_again)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_auto_awesome), contentDescription = null) },
                 onClick = { open = false; onAgain() },
+            )
+            if (hasAudio) DropdownMenuItem(
+                text = { Text(stringResource(R.string.lib_delete_audio)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_delete_sweep), contentDescription = null) },
+                onClick = { open = false; onDeleteAudio() },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_delete)) },
@@ -441,10 +463,18 @@ private fun RenameDialog(current: String, onDismiss: () -> Unit, onSave: (String
     )
 }
 
-/** Choose a model to transcribe the audio again; the current text stays available. */
+/** Choose a model (and its language, if it needs or accepts one) to transcribe the audio again. */
 @Composable
-private fun AgainDialog(installed: List<ModelSpec>, current: String?, onDismiss: () -> Unit, onStart: (ModelSpec) -> Unit) {
+private fun AgainDialog(
+    installed: List<ModelSpec>,
+    current: String?,
+    defaultLanguage: (ModelSpec) -> String?,
+    onDismiss: () -> Unit,
+    onStart: (ModelSpec, String?) -> Unit,
+) {
     var chosen by remember { mutableStateOf(installed.firstOrNull { it.id != current } ?: installed.first()) }
+    var language by remember(chosen) { mutableStateOf(defaultLanguage(chosen)) }
+    val languages = choosableLanguages(chosen)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.lib_again)) },
@@ -466,9 +496,28 @@ private fun AgainDialog(installed: List<ModelSpec>, current: String?, onDismiss:
                         Text(spec.name, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
+                if (languages.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.lib_again_language),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        languages.forEach { code ->
+                            FilterChip(selected = code == language, onClick = { language = code }, label = { Text(languageLabel(code, short = true)) })
+                        }
+                    }
+                } else {
+                    Text(
+                        stringResource(R.string.language_detected),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             }
         },
-        confirmButton = { TextButton(onClick = { onStart(chosen) }) { Text(stringResource(R.string.lib_again_start)) } },
+        confirmButton = { TextButton(onClick = { onStart(chosen, language.takeIf { languages.isNotEmpty() }) }) { Text(stringResource(R.string.lib_again_start)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

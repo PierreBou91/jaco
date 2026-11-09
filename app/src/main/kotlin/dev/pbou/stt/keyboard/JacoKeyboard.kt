@@ -230,7 +230,6 @@ class JacoKeyboard : InputMethodService(), LifecycleOwner, SavedStateRegistryOwn
         val s = graph.settings.value ?: return
         val model = graph.activeModel.value ?: return
         if (live.isRunning) return
-        graph.live.stop() // the app's dictation, if any: one microphone
         live.dismissProblem()
         live.clear() // what earlier dictations typed is in the field already
         committed = 0

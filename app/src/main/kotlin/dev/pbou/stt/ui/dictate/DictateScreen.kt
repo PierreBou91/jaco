@@ -101,7 +101,9 @@ import dev.pbou.stt.R
 import dev.pbou.stt.data.Format
 import dev.pbou.stt.engine.EngineHost
 import dev.pbou.stt.engine.Languages
-import dev.pbou.stt.engine.LiveTranscriber
+import dev.pbou.stt.engine.RecordingSession
+import dev.pbou.stt.data.LibraryText
+import dev.pbou.stt.ui.library.WatchRecording
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.ui.Meter
@@ -119,7 +121,7 @@ import dev.pbou.stt.ui.theme.TranscriptStyle
 import kotlinx.coroutines.launch
 
 @Composable
-fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit, onOpenFile: () -> Unit) {
+fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit, onOpenFile: () -> Unit, onOpenItem: (String) -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val level by vm.level.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -131,9 +133,13 @@ fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit, onOpenFile: 
     // Microphone permission, asked on the first tap.
     val micDenied = stringResource(R.string.mic_permission_denied)
     val openSettings = stringResource(R.string.action_settings)
+    val noModel = stringResource(R.string.rec_no_model)
+    fun start() = scope.launch { if (!vm.start()) snackbar.showSnackbar(noModel) }
+    // The notification shows the session's time and its buttons: ask for it with the microphone.
+    val askNotifications = rememberNotificationPermission()
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
-            vm.start()
+            askNotifications { start() }
         } else {
             scope.launch {
                 val r = snackbar.showSnackbar(micDenied, actionLabel = openSettings, duration = SnackbarDuration.Long)
@@ -144,35 +150,35 @@ fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit, onOpenFile: 
     val onMic = {
         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
         when {
-            ui.listening -> vm.stop()
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> vm.start()
+            ui.busy -> vm.stop()
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> askNotifications { start() }
             else -> askMic.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 
-    // Keep the model warm while this screen is visible; never listen in the background.
+    // Keep the model warm while this screen is visible. A session goes on in the background (it is a
+    // recording, with its notification); the sentence being spoken is shown only while this is visible.
     LaunchedEffect(ui.model, ui.options, ui.settings.keepLoaded) { vm.warmUp() }
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { vm.stop() }
-    // Leaving the tab stops listening too: the microphone is never on without the screen that shows it.
-    DisposableEffect(Unit) { onDispose { vm.stop() } }
+    WatchRecording(active = ui.busy, onWatching = vm::watching)
 
-    // Problems reported by the transcriber.
+    // Problems reported by the recorder.
     val micBusy = stringResource(R.string.mic_unavailable)
     val engineError = stringResource(R.string.engine_error)
-    LaunchedEffect(ui.live.problem) {
-        val p = ui.live.problem ?: return@LaunchedEffect
+    val audioError = stringResource(R.string.rec_audio_failed)
+    LaunchedEffect(ui.problem) {
+        val p = ui.problem ?: return@LaunchedEffect
         val message = when (p) {
-            LiveTranscriber.Problem.Microphone -> micBusy
-            is LiveTranscriber.Problem.Engine -> "$engineError ${p.message}"
+            RecordingSession.Problem.Microphone -> micBusy
+            is RecordingSession.Problem.Engine -> "$engineError ${p.message}"
+            is RecordingSession.Problem.Audio -> audioError
         }
         vm.dismissProblem()
         snackbar.showSnackbar(message, duration = SnackbarDuration.Long)
     }
 
-    val cleared = stringResource(R.string.transcript_cleared)
-    val undo = stringResource(R.string.action_undo)
+    val saved = stringResource(R.string.home_saved)
+    val open = stringResource(R.string.action_open)
     val copied = stringResource(R.string.copied)
-    val askNotifications = rememberNotificationPermission()
 
     Scaffold(
         topBar = {
@@ -187,17 +193,18 @@ fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit, onOpenFile: 
                         IconButton(onClick = onOpenFile) {
                             Icon(painterResource(R.drawable.ic_audio_file), contentDescription = stringResource(R.string.file_title))
                         }
+                        // A fresh page; the session stays in the Library.
                         IconButton(
-                            enabled = ui.hasText,
+                            enabled = ui.item != null && !ui.busy,
                             onClick = {
-                                val removed = vm.clear()
+                                val id = vm.startNew() ?: return@IconButton
                                 scope.launch {
-                                    val r = snackbar.showSnackbar(cleared, actionLabel = undo, duration = SnackbarDuration.Short)
-                                    if (r == SnackbarResult.ActionPerformed) vm.undoClear(removed)
+                                    val r = snackbar.showSnackbar(saved, actionLabel = open, duration = SnackbarDuration.Short)
+                                    if (r == SnackbarResult.ActionPerformed) onOpenItem(id)
                                 }
                             },
                         ) {
-                            Icon(painterResource(R.drawable.ic_delete_sweep), contentDescription = stringResource(R.string.action_clear))
+                            Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.home_new))
                         }
                     }
                 },
@@ -221,12 +228,14 @@ fun DictateScreen(vm: DictateViewModel, onManageModels: () -> Unit, onOpenFile: 
                         ui = ui,
                         level = { level },
                         onMic = onMic,
+                        onPause = vm::pause,
+                        onResume = vm::resume,
                         onCopy = {
-                            copyText(context, ui.live.text)
+                            copyText(context, ui.text)
                             // Android 13+ shows its own confirmation for the clipboard.
                             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) scope.launch { snackbar.showSnackbar(copied) }
                         },
-                        onShare = { shareText(context, ui.live.text) },
+                        onShare = { shareText(context, ui.text) },
                     )
                 }
             }
@@ -271,8 +280,7 @@ private fun ModelSelector(ui: DictateUi, model: ModelSpec, onClick: () -> Unit) 
 
 @Composable
 private fun Transcript(ui: DictateUi, modifier: Modifier) {
-    val live = ui.live
-    if (!ui.hasText && live.partial.isEmpty() && !ui.busy) {
+    if (!ui.hasText && ui.partial.isEmpty() && !ui.busy) {
         EmptyTranscript(modifier)
         return
     }
@@ -281,16 +289,16 @@ private fun Transcript(ui: DictateUi, modifier: Modifier) {
     LaunchedEffect(scroll) { snapshotFlow { scroll.maxValue }.collect { scroll.animateScrollTo(it) } }
     val partialColor = MaterialTheme.colorScheme.onSurfaceVariant
     Column(modifier.verticalScroll(scroll).padding(horizontal = 24.dp, vertical = 8.dp)) {
-        if (!ui.hasText && live.partial.isEmpty()) {
-            Text(stringResource(R.string.start_speaking), style = TranscriptStyle, color = partialColor)
+        if (!ui.hasText && ui.partial.isEmpty()) {
+            Text(stringResource(if (ui.paused) R.string.rec_paused else R.string.start_speaking), style = TranscriptStyle, color = partialColor)
         } else {
             SelectionContainer {
                 Text(
                     buildAnnotatedString {
-                        append(live.text)
-                        if (live.partial.isNotEmpty()) {
-                            if (live.segments.isNotEmpty()) append(" ")
-                            withStyle(SpanStyle(color = partialColor)) { append(live.partial) }
+                        append(ui.text)
+                        if (ui.partial.isNotEmpty()) {
+                            if (ui.hasText) append(" ")
+                            withStyle(SpanStyle(color = partialColor)) { append(ui.partial) }
                         }
                     },
                     style = TranscriptStyle,
@@ -308,9 +316,6 @@ private fun Timings(ui: DictateUi) {
     val style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum")
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        ui.live.segments.lastOrNull()?.let { s ->
-            Text(stringResource(R.string.timing_last, Format.decimal(s.audioMs / 1000.0), Format.integer(s.decodeMs)), style = style, color = color)
-        }
         (ui.engine as? EngineHost.State.Ready)?.let { e ->
             Text(stringResource(R.string.timing_load, Format.decimal(e.loadMs / 1000.0), e.options.threads), style = style, color = color)
         }
@@ -338,15 +343,24 @@ private fun EmptyTranscript(modifier: Modifier) {
 }
 
 @Composable
-private fun Controls(ui: DictateUi, level: () -> Float, onMic: () -> Unit, onCopy: () -> Unit, onShare: () -> Unit) {
+private fun Controls(
+    ui: DictateUi,
+    level: () -> Float,
+    onMic: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onCopy: () -> Unit,
+    onShare: () -> Unit,
+) {
     Column(
         Modifier.fillMaxWidth().padding(bottom = 20.dp, top = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val status = when {
-            ui.live.phase == LiveTranscriber.Phase.FINISHING -> stringResource(R.string.status_finishing)
+            ui.finishing -> stringResource(R.string.status_finishing)
+            ui.paused -> stringResource(R.string.rec_paused) + " · " + LibraryText.clock(ui.session?.recordedMs ?: 0)
+            ui.listening && !ui.engineLoading -> stringResource(R.string.status_listening) + " · " + LibraryText.clock(ui.session?.recordedMs ?: 0)
             ui.listening && ui.engineLoading -> stringResource(R.string.status_listening_loading)
-            ui.listening -> stringResource(R.string.status_listening)
             ui.engine is EngineHost.State.Failed -> stringResource(R.string.status_engine_failed)
             ui.engineLoading -> stringResource(R.string.status_loading, ui.model?.name ?: "")
             ui.hasText -> stringResource(R.string.status_continue)
@@ -363,12 +377,22 @@ private fun Controls(ui: DictateUi, level: () -> Float, onMic: () -> Unit, onCop
         }
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-            FilledTonalIconButton(onClick = onCopy, enabled = ui.hasText, modifier = Modifier.size(56.dp)) {
-                Icon(painterResource(R.drawable.ic_content_copy), contentDescription = stringResource(R.string.action_copy))
+            if (ui.busy) {
+                // While a session runs, the left button pauses it (the right one still shares what is there).
+                FilledTonalIconButton(onClick = if (ui.paused) onResume else onPause, enabled = !ui.finishing, modifier = Modifier.size(56.dp)) {
+                    Icon(
+                        painterResource(if (ui.paused) R.drawable.ic_fiber_manual_record_fill else R.drawable.ic_pause_fill),
+                        contentDescription = stringResource(if (ui.paused) R.string.action_resume else R.string.action_pause),
+                    )
+                }
+            } else {
+                FilledTonalIconButton(onClick = onCopy, enabled = ui.hasText, modifier = Modifier.size(56.dp)) {
+                    Icon(painterResource(R.drawable.ic_content_copy), contentDescription = stringResource(R.string.action_copy))
+                }
             }
             MicButton(
-                listening = ui.listening,
-                finishing = ui.live.phase == LiveTranscriber.Phase.FINISHING,
+                listening = ui.listening || ui.paused,
+                finishing = ui.finishing,
                 level = level,
                 onClick = onMic,
             )

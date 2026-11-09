@@ -103,7 +103,6 @@ class BenchViewModel(private val graph: AppGraph) : ViewModel() {
     /** Records sentence [index], then the next ones not yet recorded, until one is left unheard or [stopRecording]. */
     fun record(index: Int) {
         if (run.value != null || recordJob?.isActive == true) return
-        graph.live.stop()
         stoppedByUser = false
         recordJob = viewModelScope.launch {
             var i: Int? = index
@@ -140,8 +139,8 @@ class BenchViewModel(private val graph: AppGraph) : ViewModel() {
     }
 
     fun startRun() {
-        if (!ui.value.canRun) return
-        graph.live.stop()
+        // A recording in progress holds its model in memory: measuring now would swap models every sentence.
+        if (!ui.value.canRun || graph.recorder.isActive) return
         val lang = language.value
         val models = ui.value.installed.filter { it.id in ui.value.selected }
         runJob = viewModelScope.launch {

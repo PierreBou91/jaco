@@ -14,7 +14,7 @@ mic:fill stop:fill content_copy share delete download settings:fill deployed_cod
 chevron_right info wifi error refresh more_vert language graphic_eq timer speed memory arrow_back tune
 pause play_arrow delete_sweep check check_circle:fill hard_drive star:fill bolt verified:fill
 audio_file folder_open keyboard backspace keyboard_return send search arrow_forward space_bar
-library_books:fill fiber_manual_record:fill pause:fill play_arrow:fill auto_awesome edit schedule notes replay_10 forward_10
+add library_books:fill fiber_manual_record:fill pause:fill play_arrow:fill auto_awesome edit schedule notes replay_10 forward_10
 """.split()
 
 BASE = "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/{n}/materialsymbolsrounded/{n}{v}_24px.svg"

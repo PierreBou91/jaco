@@ -84,15 +84,39 @@ class ItemViewModel(private val graph: AppGraph, private val id: String) : ViewM
         deleted.value = true
     }
 
-    /** Transcribe again from the audio, now. */
-    fun transcribeAgain(spec: ModelSpec) = viewModelScope.launch {
-        graph.improver.request(id, spec.id, whileCharging = false)
+    /** Transcribe again from the audio, now, in [language] (a code or [ModelSpec.AUTO]; null: the settings'). */
+    fun transcribeAgain(spec: ModelSpec, language: String?) = viewModelScope.launch {
+        graph.improver.request(id, spec.id, language, whileCharging = false)
     }
 
     fun improveNow() = viewModelScope.launch {
         val r = graph.library.get(id)?.improve ?: return@launch
-        graph.improver.request(id, r.modelId, whileCharging = false)
+        graph.improver.request(id, r.modelId, r.language, whileCharging = false)
     }
+
+    /** The language "Transcribe again" starts with for [spec]: the settings' one. */
+    fun defaultLanguage(spec: ModelSpec): String? = graph.settings.value?.languageFor(spec)
+
+    /** Frees the space of the audio; the text stays. No playback or better transcription afterwards. */
+    fun deleteAudio(context: Context) = viewModelScope.launch {
+        releasePlayer()
+        graph.improver.cancel(id)
+        val item = graph.library.get(id) ?: return@launch
+        withContext(Dispatchers.IO) {
+            graph.library.audioFile(item)?.delete()
+            File(context.cacheDir, EXPORT_DIR).deleteRecursively()
+        }
+        graph.library.update(id) { it.copy(audio = null) }
+    }
+
+    /** Records more at the end of this recording. False if it cannot be continued (no model, recording busy). */
+    suspend fun continueRecording(): Boolean {
+        releasePlayer()
+        return graph.continueRecording(id)
+    }
+
+    /** The word-by-word preview of a recording runs only while a screen showing it is visible. */
+    fun watching(on: Boolean) = graph.recorder.watching(on)
 
     fun cancelImprove() = viewModelScope.launch { graph.improver.cancel(id) }
 
@@ -183,9 +207,12 @@ class ItemViewModel(private val graph: AppGraph, private val id: String) : ViewM
         dev.pbou.stt.ui.dictate.shareText(context, text)
     }
 
-    fun copyText(context: Context) {
+    /** With [timestamps] (the default in a recording): "[12:04] ..." lines, under the title. */
+    fun copyText(context: Context, timestamps: Boolean) {
         val item = graph.library.get(id) ?: return
-        dev.pbou.stt.ui.dictate.copyText(context, LibraryText.plain(item.transcript?.segments.orEmpty()))
+        val segments = item.transcript?.segments.orEmpty()
+        val text = if (timestamps) LibraryText.timestamped(itemTitle(context, item), segments) else LibraryText.plain(segments)
+        dev.pbou.stt.ui.dictate.copyText(context, text)
     }
 
     /** Shares the audio under the item's title (copied to the cache: other apps show the file name). */

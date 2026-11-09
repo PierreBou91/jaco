@@ -28,6 +28,7 @@ import dev.pbou.stt.engine.RecordingSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.channels.Channel
@@ -56,7 +57,6 @@ class AppGraph(app: Application) {
     val store = ModelStore(File(app.getExternalFilesDir(null) ?: app.filesDir, "models"))
     val installer = ModelInstaller(HttpFetcher("stt_app/${BuildConfig.VERSION_NAME} (Android)"))
     val host = EngineHost(store)
-    val live = LiveTranscriber(app.assets, host)
     /** The keyboard's own dictation, so what is typed elsewhere never lands in the app's transcript. */
     val keyboardLive = LiveTranscriber(app.assets, host)
     val settingsRepo = SettingsRepository(app)
@@ -78,7 +78,6 @@ class AppGraph(app: Application) {
             val wanted = if (language == ModelSpec.AUTO && spec.languages !is Languages.ChooseOrAuto) s.language else language
             options(spec, s, wanted)
         },
-        stopDictation = { live.stop() },
         library = library,
         keepAudio = { awaitSettings().keepAudio },
         awaitNoRecording = { onWait ->
@@ -89,6 +88,9 @@ class AppGraph(app: Application) {
         },
     )
 
+    /** The session the home screen shows when nothing is recording (cleared by its "New" button). */
+    val homeItemId = MutableStateFlow<String?>(null)
+
     /** Asks the UI to show a library item (from the recording notification). */
     val showItem = Channel<String>(Channel.CONFLATED)
 
@@ -96,13 +98,20 @@ class AppGraph(app: Application) {
 
     /** Something is using the engine for the user right now: background work must wait. */
     fun engineBusy(): Boolean =
-        recorder.isActive || live.isRunning || keyboardLive.isRunning || files.state.value?.busy == true
+        recorder.isActive || keyboardLive.isRunning || files.state.value?.busy == true
 
     /** Starts a recording with the dictation model; returns its library id, or null if no model is installed. */
     suspend fun startRecording(): String? {
         val s = awaitSettings()
         val spec = dictationModel(s) ?: return null
-        return recorder.start(spec, options(spec, s), s.keepAudio)
+        return recorder.start(spec, options(spec, s), s.keepAudio, s.pauseSeconds)
+    }
+
+    /** Records more at the end of recording [id], with the dictation model. False if it cannot be continued. */
+    suspend fun continueRecording(id: String): Boolean {
+        val s = awaitSettings()
+        val spec = dictationModel(s) ?: return false
+        return recorder.continueRecording(id, spec, options(spec, s), s.pauseSeconds)
     }
 
     /** A recording was saved with its audio: queue a better transcription if the settings ask for one. */
@@ -110,7 +119,7 @@ class AppGraph(app: Application) {
         val s = awaitSettings()
         val model = s.improveModelId?.takeIf { it in store.installed.value } ?: return
         if (!s.keepAudio || item.audio == null || item.transcript?.modelId == model) return
-        improver.request(item.id, model, whileCharging = true)
+        improver.request(item.id, model, language = null, whileCharging = true)
     }
 
     /** Asks the UI to show the file screen (a file was shared to the app). */
@@ -132,10 +141,11 @@ class AppGraph(app: Application) {
             recorder.recover()
             improver.schedule()
         }
+        scope.launch { settings.filterNotNull().collect { recorder.allowPreview(it.livePreview) } }
         // Dictation, the keyboard or a recording starts: a background improvement steps aside.
         scope.launch {
-            combine(live.state, keyboardLive.state, recorder.itemId, files.state) { a, b, r, f ->
-                a.phase != LiveTranscriber.Phase.IDLE || b.phase != LiveTranscriber.Phase.IDLE || r != null || f?.busy == true
+            combine(keyboardLive.state, recorder.itemId, files.state) { k, r, f ->
+                k.phase != LiveTranscriber.Phase.IDLE || r != null || f?.busy == true
             }.collect { busy -> if (busy) improver.yieldEngine() }
         }
     }

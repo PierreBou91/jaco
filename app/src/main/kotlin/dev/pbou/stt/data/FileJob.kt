@@ -63,7 +63,6 @@ class FileJob(
     /** The language of a new file for this model: the one in the settings ("auto" or a code). */
     private val defaultLanguage: suspend (ModelSpec?) -> String,
     private val optionsFor: suspend (ModelSpec, language: String) -> EngineOptions,
-    private val stopDictation: () -> Unit,
     private val library: Library,
     private val keepAudio: suspend () -> Boolean,
     /** Returns once no recording is running (it holds its model in memory). */
@@ -136,7 +135,6 @@ class FileJob(
             _state.update { it?.copy(phase = FileState.Phase.FAILED, problem = FileState.Problem.NO_MODEL) }
             return
         }
-        stopDictation() // one user of the engine at a time
         awaitNoRecording { _state.update { it?.copy(waitingForRecording = true) } }
         _state.update { it?.copy(waitingForRecording = false) }
         val t0 = SystemClock.elapsedRealtime()
@@ -146,9 +144,10 @@ class FileJob(
         // A new transcript in the library item, filled as sentences come.
         var index = -1
         if (itemId != null) library.update(itemId) {
-            index = it.transcripts.size
+            val others = it.transcripts.withoutOlder(model.id)
+            index = others.size
             it.copy(
-                transcripts = it.transcripts + Transcript(model.id, options.language, live = false, System.currentTimeMillis(), emptyList()),
+                transcripts = others + Transcript(model.id, options.language, live = false, System.currentTimeMillis(), emptyList()),
                 shown = index, status = LibraryItem.Status.TRANSCRIBING,
             )
         }

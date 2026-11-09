@@ -279,7 +279,7 @@
     <string name="lib_recording_open">Touchez pour ouvrir</string>
     <string name="lib_transcribing">Transcription en cours</string>
     <string name="lib_empty_title">Vos enregistrements et fichiers</string>
-    <string name="lib_empty_body">Enregistrez une réunion, un cours ou une note\u00A0: c\'est transcrit pendant que vous parlez, sans internet. Les fichiers transcrits sont aussi gardés ici.</string>
+    <string name="lib_empty_body">Tout ce que vous dictez ou enregistrez est gardé ici, avec les heures, et peut être recherché. Les fichiers transcrits aussi.</string>
     <string name="lib_rename">Renommer</string>
     <string name="lib_delete_title">Supprimer cet élément\u00A0?</string>
     <string name="lib_delete_body">Son texte et son audio seront supprimés du téléphone.</string>
@@ -299,4 +299,15 @@
     <string name="player_play">Lire</string>
     <string name="player_back">Reculer de 10 secondes</string>
     <string name="player_forward">Avancer de 10 secondes</string>
+    <string name="rec_continue">Continuer l\'enregistrement</string>
+    <string name="rec_cannot_continue">Impossible de continuer cet enregistrement pour le moment.</string>
+    <string name="lib_copy_plain">Copier le texte seul</string>
+    <string name="lib_delete_audio">Supprimer l\'audio</string>
+    <string name="lib_delete_audio_title">Supprimer l\'audio\u00A0?</string>
+    <string name="lib_delete_audio_body">Le texte reste. Sans l\'audio, il ne peut plus être réécouté, partagé en audio ni retranscrit.</string>
+    <string name="lib_again_language">Langue</string>
+    <string name="lib_audio_space">Audio\u00A0: %1$s</string>
+    <string name="home_saved">Enregistré dans la bibliothèque</string>
+    <string name="home_new">Nouvelle page</string>
+    <string name="action_open">Ouvrir</string>
 </resources>

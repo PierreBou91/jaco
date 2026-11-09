@@ -29,6 +29,12 @@ data class Transcript(
     val text: String get() = segments.joinToString(" ") { it.text }
 }
 
+/**
+ * Without the earlier full-audio versions by [modelId]: a new one replaces them (after a recording was
+ * continued, they miss its end). The live version always stays.
+ */
+fun List<Transcript>.withoutOlder(modelId: String): List<Transcript> = filterNot { !it.live && it.modelId == modelId }
+
 /** A recording made in the app, or a file that was transcribed. */
 data class LibraryItem(
     val id: String,
@@ -52,7 +58,12 @@ data class LibraryItem(
     val transcript: Transcript? get() = transcripts.getOrNull(shown) ?: transcripts.lastOrNull()
 }
 
-data class ImproveRequest(val modelId: String, val whileCharging: Boolean)
+data class ImproveRequest(
+    val modelId: String,
+    val whileCharging: Boolean,
+    /** The language to tell the model ([dev.pbou.stt.engine.ModelSpec.AUTO] or a code); null: the settings' one. */
+    val language: String? = null,
+)
 
 /**
  * The recordings and transcribed files, one folder each under [root]: `item.json` and the audio if kept.
@@ -119,7 +130,7 @@ class Library(private val root: File) {
             .put("id", i.id).put("kind", i.kind.name).put("title", i.title ?: JSONObject.NULL)
             .put("createdAt", i.createdAt).put("durationMs", i.durationMs).put("audio", i.audio ?: JSONObject.NULL)
             .put("shown", i.shown).put("status", i.status.name)
-            .put("improve", i.improve?.let { JSONObject().put("model", it.modelId).put("whileCharging", it.whileCharging) } ?: JSONObject.NULL)
+            .put("improve", i.improve?.let { JSONObject().put("model", it.modelId).put("whileCharging", it.whileCharging).put("language", it.language ?: JSONObject.NULL) } ?: JSONObject.NULL)
             .put("transcripts", JSONArray(i.transcripts.map { t ->
                 JSONObject().put("model", t.modelId).put("language", t.language ?: JSONObject.NULL).put("live", t.live)
                     .put("createdAt", t.createdAt)
@@ -151,7 +162,7 @@ class Library(private val root: File) {
                 },
                 shown = o.optInt("shown"),
                 status = LibraryItem.Status.valueOf(o.optString("status", "DONE")),
-                improve = o.optJSONObject("improve")?.let { ImproveRequest(it.getString("model"), it.optBoolean("whileCharging", true)) },
+                improve = o.optJSONObject("improve")?.let { ImproveRequest(it.getString("model"), it.optBoolean("whileCharging", true), it.optStringOrNull("language")) },
             )
         }
 

@@ -117,7 +117,12 @@ fun SttAppUi(graph: AppGraph) {
             exitTransition = { fadeOut(tween(180)) },
         ) {
             composable(Tab.DICTATE.route) {
-                DictateScreen(viewModel { DictateViewModel(graph) }, onManageModels = { go(Tab.MODELS) }, onOpenFile = { nav.navigate(FILE) })
+                DictateScreen(
+                    viewModel { DictateViewModel(graph) },
+                    onManageModels = { go(Tab.MODELS) },
+                    onOpenFile = { nav.navigate(FILE) },
+                    onOpenItem = { nav.navigate(itemRoute(it)) { launchSingleTop = true } },
+                )
             }
             composable(Tab.LIBRARY.route) {
                 val app = LocalContext.current.applicationContext

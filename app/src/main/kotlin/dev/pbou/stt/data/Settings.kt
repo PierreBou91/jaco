@@ -43,7 +43,7 @@ data class AppSettings(
     /** The keyboard starts listening as soon as it opens. */
     val keyboardAutoStart: Boolean = true,
     /** Recordings keep their audio (playback, sharing, a better transcription later). Off: only the text. */
-    val keepAudio: Boolean = false,
+    val keepAudio: Boolean = true,
     /** With [keepAudio]: the model that transcribes recordings again while charging, null for none. */
     val improveModelId: String? = null,
 ) {

@@ -17,7 +17,9 @@ import androidx.work.workDataOf
 import dev.pbou.stt.R
 import dev.pbou.stt.SttApplication
 import dev.pbou.stt.engine.FileTranscriber
+import dev.pbou.stt.engine.Languages
 import dev.pbou.stt.engine.ModelCatalog
+import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.engine.UnsupportedAudioException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,9 +48,9 @@ class Improver(private val context: Context, private val library: Library) {
     /** One improvement at a time (WorkManager may start several). */
     internal val lock = Mutex()
 
-    /** Asks for a better transcription of [itemId] with [modelId]: at once, or when charging. */
-    suspend fun request(itemId: String, modelId: String, whileCharging: Boolean) {
-        library.update(itemId) { it.copy(improve = ImproveRequest(modelId, whileCharging)) } ?: return
+    /** Asks for a better transcription of [itemId] with [modelId] in [language] (null: the settings'): at once, or when charging. */
+    suspend fun request(itemId: String, modelId: String, language: String?, whileCharging: Boolean) {
+        library.update(itemId) { it.copy(improve = ImproveRequest(modelId, whileCharging, language)) } ?: return
         enqueue(itemId, whileCharging, delayMinutes = 0)
     }
 
@@ -113,7 +115,9 @@ class ImproveWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             if (graph.engineBusy()) return@withLock Result.retry()
             runCatching { setForeground(foregroundInfo(item, spec.name, null)) }
             val settings = graph.awaitSettings()
-            val options = graph.options(spec, settings, settings.language)
+            // "Detect" asked for a model that cannot detect: it gets the spoken language.
+            val wanted = request.language?.takeIf { it != ModelSpec.AUTO || spec.languages is Languages.ChooseOrAuto } ?: settings.languageFor(spec)
+            val options = graph.options(spec, settings, wanted)
             val segments = ArrayList<FileTranscriber.Segment>()
             var lastPercent = -1
             improver.report(id, 0f)
@@ -138,7 +142,8 @@ class ImproveWorker(context: Context, params: WorkerParameters) : CoroutineWorke
                 graph.library.update(id) {
                     // A newer request (another model) replaced this one meanwhile: keep it for later.
                     val keep = it.improve?.takeIf { r -> r != request }
-                    it.copy(transcripts = it.transcripts + result, shown = it.transcripts.size, improve = keep)
+                    val others = it.transcripts.withoutOlder(spec.id)
+                    it.copy(transcripts = others + result, shown = others.size, improve = keep)
                 }
                 Result.success()
             } catch (e: CancellationException) {

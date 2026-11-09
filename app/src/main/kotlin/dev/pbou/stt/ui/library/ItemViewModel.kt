@@ -7,8 +7,13 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pbou.stt.AppGraph
+import dev.pbou.stt.R
+import dev.pbou.stt.data.DownloadState
 import dev.pbou.stt.data.LibraryItem
-import dev.pbou.stt.data.LibraryText
+import dev.pbou.stt.data.SpeakerText
+import dev.pbou.stt.data.Speakers
+import dev.pbou.stt.data.Voice
+import dev.pbou.stt.engine.SpeakerModels
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.engine.RecordingSession
@@ -32,6 +37,11 @@ data class ItemUi(
     val recording: RecordingSession.State? = null,
     val recordingProblem: RecordingSession.Problem? = null,
     val improving: Float? = null,
+    /** Progress of the speaker search running now. */
+    val findingSpeakers: Float? = null,
+    /** The speaker models are being fetched (or wait for Wi-Fi) before the search can start. */
+    val speakerModels: DownloadState? = null,
+    val voices: List<Voice> = emptyList(),
     /** Models that can transcribe it again (installed). */
     val installed: List<ModelSpec> = emptyList(),
     val deleted: Boolean = false,
@@ -42,18 +52,24 @@ data class PlayerUi(val ready: Boolean = false, val playing: Boolean = false, va
 class ItemViewModel(private val graph: AppGraph, private val id: String) : ViewModel() {
     private val deleted = MutableStateFlow(false)
 
+    private val speakerState = combine(graph.speakerFinder.progress, graph.downloads.states, graph.voices.all, ::Triple)
+
     val ui: StateFlow<ItemUi> = combine(
         graph.library.item(id),
         combine(graph.recorder.itemId, graph.recorder.session.state, graph.recorder.problem, ::Triple),
-        graph.improver.progress,
+        combine(graph.improver.progress, speakerState, ::Pair),
         graph.store.installed,
         deleted,
-    ) { item, (recId, rec, problem), progress, installed, gone ->
+    ) { item, (recId, rec, problem), (progress, speakers), installed, gone ->
+        val (finding, downloads, voices) = speakers
         ItemUi(
             item = item,
             recording = rec.takeIf { recId == id },
             recordingProblem = problem?.takeIf { it.first == id }?.second,
             improving = progress[id],
+            findingSpeakers = finding[id],
+            speakerModels = downloads[SpeakerModels.id],
+            voices = voices,
             installed = ModelCatalog.all.filter { it.id in installed },
             deleted = gone,
         )
@@ -119,6 +135,53 @@ class ItemViewModel(private val graph: AppGraph, private val id: String) : ViewM
     fun watching(on: Boolean) = graph.recorder.watching(on)
 
     fun cancelImprove() = viewModelScope.launch { graph.improver.cancel(id) }
+
+    // Speakers.
+    /** Finds who spoke when; [count]: how many people, null to find out. */
+    fun findSpeakers(count: Int?) = viewModelScope.launch {
+        graph.speakerFinder.request(id, count)
+        graph.ensureSpeakerModels()
+    }
+
+    fun cancelSpeakers() = viewModelScope.launch { graph.speakerFinder.cancel(id) }
+
+    /**
+     * Names person [index] [name] (blank: back to "Speaker N"). Another person here with that name is the
+     * same one: they are merged. With [remember], the voice is saved under that name, to be recognised in
+     * later recordings (or teaches the saved voice of that name).
+     */
+    fun nameSpeaker(index: Int, name: String, remember: Boolean) = viewModelScope.launch {
+        val speakers = graph.library.get(id)?.speakers ?: return@launch
+        val person = speakers.people.getOrNull(index) ?: return@launch
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) {
+            graph.library.update(id) { it.copy(speakers = it.speakers?.withPerson(index, person.copy(name = null, voiceId = null))) }
+            return@launch
+        }
+        val voiceId = if (remember) graph.voices.remember(trimmed, person.voice, person.seconds) else null
+        val names = SpeakerText.names(speakers, { graph.voices.get(it)?.name }, { "" })
+        val twin = names.indices.firstOrNull { it != index && names[it].equals(trimmed, ignoreCase = true) }
+        graph.library.update(id) { item ->
+            var s = item.speakers ?: return@update item
+            s = s.withPerson(index, person.copy(name = trimmed, voiceId = voiceId))
+            if (twin != null) s = SpeakerText.merge(s, from = index, into = twin).let { m ->
+                // The merged person keeps the name just given (and the voice, if remembered).
+                val into = if (twin > index) twin - 1 else twin
+                m.withPerson(into, m.people[into].copy(name = trimmed, voiceId = voiceId ?: m.people[into].voiceId))
+            }
+            item.copy(speakers = s)
+        }
+    }
+
+    private fun Speakers.withPerson(index: Int, p: Speakers.Person) = copy(people = people.mapIndexed { i, old -> if (i == index) p else old })
+
+    /** Who said each sentence of the shown transcript, and the names, for export. */
+    private fun speakerLines(context: Context, item: LibraryItem): Pair<List<Int?>, List<String>> {
+        val speakers = item.speakers ?: return item.transcript?.segments.orEmpty().map { null } to emptyList()
+        val who = SpeakerText.speakerOf(item.transcript?.segments.orEmpty(), speakers)
+        val names = SpeakerText.names(speakers, { graph.voices.get(it)?.name }, { context.getString(R.string.speaker_n, it) })
+        return who to names
+    }
 
     // Playback.
     private val _player = MutableStateFlow(PlayerUi())
@@ -202,17 +265,19 @@ class ItemViewModel(private val graph: AppGraph, private val id: String) : ViewM
     // Export.
     fun shareText(context: Context, timestamps: Boolean) {
         val item = graph.library.get(id) ?: return
-        val segments = item.transcript?.segments.orEmpty()
-        val text = if (timestamps) LibraryText.timestamped(itemTitle(context, item), segments) else LibraryText.plain(segments)
-        dev.pbou.stt.ui.dictate.shareText(context, text)
+        dev.pbou.stt.ui.dictate.shareText(context, exportText(context, item, timestamps))
     }
 
-    /** With [timestamps] (the default in a recording): "[12:04] ..." lines, under the title. */
+    /** With [timestamps] (the default in a recording): "[12:04] Anna: ..." lines, under the title. */
     fun copyText(context: Context, timestamps: Boolean) {
         val item = graph.library.get(id) ?: return
+        dev.pbou.stt.ui.dictate.copyText(context, exportText(context, item, timestamps))
+    }
+
+    private fun exportText(context: Context, item: LibraryItem, timestamps: Boolean): String {
         val segments = item.transcript?.segments.orEmpty()
-        val text = if (timestamps) LibraryText.timestamped(itemTitle(context, item), segments) else LibraryText.plain(segments)
-        dev.pbou.stt.ui.dictate.copyText(context, text)
+        val (who, names) = speakerLines(context, item)
+        return if (timestamps) SpeakerText.timestamped(itemTitle(context, item), segments, who, names) else SpeakerText.plain(segments, who, names)
     }
 
     /** Shares the audio under the item's title (copied to the cache: other apps show the file name). */

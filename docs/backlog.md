@@ -42,3 +42,10 @@ Correcting a wrong word today means switching keyboards. To design together with
   always plugged in); the notification's own Pause and Stop buttons (the screen's buttons are checked); the
   live words on the home screen with real speech (the test room was silent); a file transcribed with "Keep
   the audio" on; dictating with the keyboard while a session records (both share the microphone).
+- **Speakers, first version** (M4, 2026-11-10). Not done yet:
+  - a sentence spoken by two people (no pause between them) goes to the main one; it could be split at the
+    change of speaker with the models that give word times (Parakeet);
+  - the saved-voice threshold rests on a small sample (12 people pairs): check it on real recordings;
+  - the eight speaker colors repeat from the ninth speaker on;
+  - the home screen's Copy stays plain text, without speaker names;
+  - not checked on a phone: the download waiting for Wi-Fi, and a file transcribed with its audio.

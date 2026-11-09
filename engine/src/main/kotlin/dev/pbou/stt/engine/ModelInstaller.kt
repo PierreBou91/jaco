@@ -31,7 +31,7 @@ class ModelInstaller(private val http: HttpFetcher = HttpFetcher()) {
         fun onProgress(phase: Phase, done: Long, total: Long)
     }
 
-    suspend fun install(spec: ModelSpec, store: ModelStore, listener: Listener) = withContext(Dispatchers.IO) {
+    suspend fun install(spec: Installable, store: ModelStore, listener: Listener) = withContext(Dispatchers.IO) {
         val staging = store.stagingDir(spec)
         // Leftovers from another version of this catalog entry (new URL or hashes) are never reused.
         val stamp = File(staging, ModelStore.STAMP)
@@ -52,7 +52,7 @@ class ModelInstaller(private val http: HttpFetcher = HttpFetcher()) {
         store.refresh()
     }
 
-    private suspend fun fetchFiles(spec: ModelSpec, source: ModelSource.Files, payload: File, listener: Listener) {
+    private suspend fun fetchFiles(spec: Installable, source: ModelSource.Files, payload: File, listener: Listener) {
         val total = spec.installBytes
         var before = 0L
         for (f in spec.files) {
@@ -60,7 +60,7 @@ class ModelInstaller(private val http: HttpFetcher = HttpFetcher()) {
             if (out.length() != f.size) {
                 out.parentFile?.mkdirs()
                 val part = File(out.path + PART)
-                http.download("${source.baseUrl}/${f.path}", part, f.size) { listener.onProgress(Phase.DOWNLOADING, before + it, total) }
+                http.download(f.url ?: "${source.baseUrl}/${f.path}", part, f.size) { listener.onProgress(Phase.DOWNLOADING, before + it, total) }
                 listener.onProgress(Phase.VERIFYING, before + f.size, total)
                 if (sha256(part) != f.sha256) {
                     part.delete()
@@ -73,7 +73,7 @@ class ModelInstaller(private val http: HttpFetcher = HttpFetcher()) {
     }
 
     private suspend fun fetchArchive(
-        spec: ModelSpec, source: ModelSource.Archive, staging: File, payload: File, listener: Listener,
+        spec: Installable, source: ModelSource.Archive, staging: File, payload: File, listener: Listener,
     ) {
         val archive = File(staging, ARCHIVE)
         if (archive.length() != source.size) {
@@ -126,7 +126,7 @@ class ModelInstaller(private val http: HttpFetcher = HttpFetcher()) {
     }
 
     /** What is left to download plus room to unpack, against the free space, with a small margin. */
-    private fun checkSpace(spec: ModelSpec, store: ModelStore, staging: File) {
+    private fun checkSpace(spec: Installable, store: ModelStore, staging: File) {
         val staged = store.stagedBytes(spec)
         val needed = when (spec.source) {
             is ModelSource.Files -> spec.installBytes - staged
@@ -145,8 +145,8 @@ class ModelInstaller(private val http: HttpFetcher = HttpFetcher()) {
         private const val SPACE_MARGIN = 64L * 1024 * 1024
 
         /** Identifies what a staging folder was downloaded for. */
-        fun fingerprint(spec: ModelSpec): String =
-            (listOf(spec.source.toString()) + spec.files.map { "${it.path} ${it.size} ${it.sha256}" }).joinToString("\n")
+        fun fingerprint(spec: Installable): String =
+            (listOf(spec.source.toString()) + spec.files.map { "${it.path} ${it.size} ${it.sha256} ${it.url.orEmpty()}".trimEnd() }).joinToString("\n")
 
         fun sha256(f: File): String {
             val digest = MessageDigest.getInstance("SHA-256")

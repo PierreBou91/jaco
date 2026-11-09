@@ -46,6 +46,8 @@ data class AppSettings(
     val keepAudio: Boolean = true,
     /** With [keepAudio]: the model that transcribes recordings again while charging, null for none. */
     val improveModelId: String? = null,
+    /** With [keepAudio]: find who spoke when after each recording (and file), see [SpeakerFinder]. */
+    val findSpeakers: Boolean = true,
 ) {
     /** The threads to use: the chosen number, else the phone's fast cores. */
     val effectiveThreads: Int get() = threads ?: recommendedThreads
@@ -98,6 +100,7 @@ class SettingsRepository(private val context: Context) {
         val keyboardAutoStart = booleanPreferencesKey("keyboard_auto_start")
         val keepAudio = booleanPreferencesKey("keep_audio")
         val improveModel = stringPreferencesKey("improve_model")
+        val findSpeakers = booleanPreferencesKey("find_speakers")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map(::read)
@@ -118,6 +121,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.keyboardAutoStart] = s.keyboardAutoStart
             prefs[Keys.keepAudio] = s.keepAudio
             if (s.improveModelId == null) prefs.remove(Keys.improveModel) else prefs[Keys.improveModel] = s.improveModelId
+            prefs[Keys.findSpeakers] = s.findSpeakers
         }
     }
 
@@ -138,6 +142,7 @@ class SettingsRepository(private val context: Context) {
             keyboardAutoStart = p[Keys.keyboardAutoStart] ?: d.keyboardAutoStart,
             keepAudio = p[Keys.keepAudio] ?: d.keepAudio,
             improveModelId = p[Keys.improveModel],
+            findSpeakers = p[Keys.findSpeakers] ?: d.findSpeakers,
         )
     }
 }

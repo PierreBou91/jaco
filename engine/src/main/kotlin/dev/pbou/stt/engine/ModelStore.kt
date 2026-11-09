@@ -24,17 +24,17 @@ class ModelStore(val root: File, private val catalog: List<ModelSpec> = ModelCat
     /** Ids of the installed models. Call [refresh] after anything changes the disk. */
     val installed: StateFlow<Set<String>> = _installed.asStateFlow()
 
-    fun dir(spec: ModelSpec) = File(root, spec.id)
-    fun stagingDir(spec: ModelSpec) = File(root, ".staging/${spec.id}")
+    fun dir(spec: Installable) = File(root, spec.id)
+    fun stagingDir(spec: Installable) = File(root, ".staging/${spec.id}")
 
-    fun isInstalled(spec: ModelSpec) = spec.files.all { File(dir(spec), it.path).length() == it.size }
+    fun isInstalled(spec: Installable) = spec.files.all { File(dir(spec), it.path).length() == it.size }
 
     fun refresh() {
         _installed.value = scan()
     }
 
     /** Bytes already downloaded for a paused or running install (0 if none). */
-    fun stagedBytes(spec: ModelSpec): Long =
+    fun stagedBytes(spec: Installable): Long =
         stagingDir(spec).walkTopDown().filter { it.isFile && it.name != STAMP }.sumOf { it.length() }
 
     /** Space used by installed models and leftover downloads. */
@@ -42,13 +42,13 @@ class ModelStore(val root: File, private val catalog: List<ModelSpec> = ModelCat
 
     fun freeBytes(): Long = root.apply { mkdirs() }.usableSpace
 
-    suspend fun delete(spec: ModelSpec) = withContext(Dispatchers.IO) {
+    suspend fun delete(spec: Installable) = withContext(Dispatchers.IO) {
         dir(spec).deleteRecursively()
         stagingDir(spec).deleteRecursively()
         refresh()
     }
 
-    suspend fun discardStaging(spec: ModelSpec) = withContext(Dispatchers.IO) {
+    suspend fun discardStaging(spec: Installable) = withContext(Dispatchers.IO) {
         stagingDir(spec).deleteRecursively()
     }
 

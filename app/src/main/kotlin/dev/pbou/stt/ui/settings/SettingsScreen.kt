@@ -72,6 +72,9 @@ import dev.pbou.stt.BuildConfig
 import dev.pbou.stt.R
 import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.Format
+import dev.pbou.stt.data.Voice
+import dev.pbou.stt.engine.SpeakerModels
+import androidx.compose.material3.OutlinedTextField
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.keyboard.KeyboardSwitch
@@ -85,6 +88,10 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
     val settings = graph.settings
     val dictationModel = graph.activeModel
     val installed = graph.store.installed
+    val voices = graph.voices.all
+
+    fun renameVoice(id: String, name: String) = viewModelScope.launch { if (name.isNotBlank()) graph.voices.rename(id, name) }
+    fun deleteVoice(id: String) = viewModelScope.launch { graph.voices.delete(id) }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         val before = graph.settings.value ?: return
@@ -104,6 +111,8 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
     var languageDialog by rememberSaveable { mutableStateOf(false) }
     var fileModelDialog by rememberSaveable { mutableStateOf(false) }
     var improveDialog by rememberSaveable { mutableStateOf(false) }
+    var voicesDialog by rememberSaveable { mutableStateOf(false) }
+    val voices = vm.voices.collectAsStateWithLifecycle().value
     val dictationModel = vm.dictationModel.collectAsStateWithLifecycle().value
     val installed = vm.installed.collectAsStateWithLifecycle().value.let { ids -> ModelCatalog.all.filter { it.id in ids } }
     val fileModel = installed.firstOrNull { it.id == s.fileModelId }
@@ -188,6 +197,23 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
                     onClick = { improveDialog = true },
                 )
             }
+            if (s.keepAudio) item {
+                SwitchItem(
+                    title = stringResource(R.string.setting_speakers),
+                    summary = stringResource(R.string.setting_speakers_summary, Format.bytes(context, SpeakerModels.installBytes)),
+                    icon = R.drawable.ic_groups,
+                    checked = s.findSpeakers,
+                ) { v -> vm.update { it.copy(findSpeakers = v) } }
+            }
+            if (s.keepAudio && s.findSpeakers) item {
+                Item(
+                    title = stringResource(R.string.setting_voices),
+                    summary = if (voices.isEmpty()) stringResource(R.string.setting_voices_none)
+                    else voices.sortedBy { it.name.lowercase() }.joinToString(", ") { it.name },
+                    icon = R.drawable.ic_record_voice_over,
+                    onClick = { voicesDialog = true },
+                )
+            }
 
             item { SectionHeader(stringResource(R.string.settings_performance)) }
             item { ThreadsSetting(s.effectiveThreads) { v -> vm.update { it.copy(threads = v) } } }
@@ -260,11 +286,69 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
             improveDialog = false
         }
     }
+    if (voicesDialog) {
+        VoicesDialog(voices, onDismiss = { voicesDialog = false }, onRename = vm::renameVoice, onDelete = vm::deleteVoice)
+    }
     if (languageDialog) {
         LanguageDialog(current = s.language, onDismiss = { languageDialog = false }) { code ->
             vm.update { it.copy(language = code) }
             languageDialog = false
         }
+    }
+}
+
+/** The remembered voices: rename one (everywhere it was recognised) or forget it. */
+@Composable
+private fun VoicesDialog(voices: List<Voice>, onDismiss: () -> Unit, onRename: (String, String) -> Unit, onDelete: (String) -> Unit) {
+    var editing by remember { mutableStateOf<Voice?>(null) }
+    var forgetting by remember { mutableStateOf<Voice?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.setting_voices)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    stringResource(R.string.voices_help),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                if (voices.isEmpty()) Text(stringResource(R.string.setting_voices_none), style = MaterialTheme.typography.bodyLarge)
+                voices.sortedBy { it.name.lowercase() }.forEach { v ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(painterResource(R.drawable.ic_person), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(16.dp))
+                        Text(v.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { editing = v }) {
+                            Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.lib_rename))
+                        }
+                        IconButton(onClick = { forgetting = v }) {
+                            Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.voices_forget))
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
+    )
+    editing?.let { v ->
+        var text by remember(v.id) { mutableStateOf(v.name) }
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text(stringResource(R.string.lib_rename)) },
+            text = { OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
+            confirmButton = { TextButton(onClick = { onRename(v.id, text); editing = null }, enabled = text.isNotBlank()) { Text(stringResource(R.string.action_save)) } },
+            dismissButton = { TextButton(onClick = { editing = null }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+    forgetting?.let { v ->
+        AlertDialog(
+            onDismissRequest = { forgetting = null },
+            title = { Text(stringResource(R.string.voices_forget_title, v.name)) },
+            text = { Text(stringResource(R.string.voices_forget_body)) },
+            confirmButton = { TextButton(onClick = { onDelete(v.id); forgetting = null }) { Text(stringResource(R.string.voices_forget)) } },
+            dismissButton = { TextButton(onClick = { forgetting = null }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
 }
 
@@ -528,6 +612,8 @@ fun LicensesScreen(onBack: () -> Unit) {
         Credit("sherpa-onnx", "k2-fsa · Apache 2.0", "https://github.com/k2-fsa/sherpa-onnx"),
         Credit("ONNX Runtime", "Microsoft · MIT", "https://github.com/microsoft/onnxruntime"),
         Credit("Silero VAD", "Silero Team · MIT", "https://github.com/snakers4/silero-vad"),
+        Credit("pyannote segmentation 3.0", "CNRS, pyannote · MIT", "https://huggingface.co/pyannote/segmentation-3.0"),
+        Credit("TitaNet small", "NVIDIA · CC-BY-4.0", "https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nemo/models/titanet_small"),
         Credit("Inter", "Rasmus Andersson · SIL Open Font License 1.1", "https://rsms.me/inter/"),
         Credit("Material Symbols", "Google · Apache 2.0", "https://fonts.google.com/icons"),
         Credit("Android Jetpack", "Google · Apache 2.0", "https://developer.android.com/jetpack"),

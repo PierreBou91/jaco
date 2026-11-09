@@ -45,6 +45,13 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   (with times by default, or text only), share (text, text with times, audio), continue recording, transcribe
   again with another model and language, "Improve while charging" (a bigger model such as Cohere redoes it when
   plugged in; the live version stays one tap away), delete the audio but keep the text, rename, delete.
+- **Speakers** (M4): after a recording (or a file with its audio), Jaco finds who spoke when, in the
+  background (about 9 minutes per hour of audio on a Galaxy Z Flip6). Sentences get the speaker's name and
+  color, with each person's share of the talk on top; copy and share name the speakers. Tap a speaker to name
+  them: a name already used in the recording merges the two, and "Remember this voice" saves it, so Jaco
+  recognises them in the next recordings (Settings, Saved voices; stored on the phone only). "Find speakers
+  again" can be told how many people there are. Models: pyannote segmentation 3.0 and TitaNet small (42 MB,
+  downloaded on first use). How they were chosen: [docs/speakers.md](docs/speakers.md).
 - **Settings**: keyboard, language, model for files, end-of-sentence pause, live preview, CPU cores (defaults
   to the count measured fastest, usually 4: more cores is slower on phones), keep the model in memory, timings.
 - Dark theme with an orange accent, Inter font, English and French UI.
@@ -85,7 +92,7 @@ models from `~/models/stt` into the app.
 - **M1, the lab**: done (benchmark, transcribe a file).
 - **M2, the keyboard**: first version done (voice-only keyboard); next: polish from daily use.
 - **M3, the recorder**: first version done (recorder, Library, playback, search, export, improve while charging).
-- **M4, speakers**: diarization (who spoke when) on recordings.
+- **M4, speakers**: first version done (who spoke when, names, saved voices).
 - Later: rewriting with a small local LLM, translation, call transcription research.
 
 Ideas parked for later and loose ends: [docs/backlog.md](docs/backlog.md).

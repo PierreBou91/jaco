@@ -310,4 +310,33 @@
     <string name="home_saved">Enregistré dans la bibliothèque</string>
     <string name="home_new">Nouvelle page</string>
     <string name="action_open">Ouvrir</string>
+    <!-- Intervenants (M4) -->
+    <string name="speaker_n">Intervenant %1$d</string>
+    <string name="speakers_notif_channel">Recherche des intervenants</string>
+    <string name="speakers_notif_title">Recherche de qui parle et quand</string>
+    <string name="speakers_models_name">Modèles des intervenants</string>
+    <string name="setting_speakers">Trouver les intervenants</string>
+    <string name="setting_speakers_summary">Après chaque enregistrement, trouve qui parle et quand, à partir de l\'audio. Modèles : %1$s, téléchargés une fois.</string>
+    <string name="setting_voices">Voix enregistrées</string>
+    <string name="setting_voices_none">Aucune pour l\'instant : nommez un intervenant dans un enregistrement pour garder sa voix</string>
+    <string name="voices_help">Jaco reconnaît ces personnes dans les nouveaux enregistrements. Gardé sur ce téléphone uniquement.</string>
+    <string name="voices_forget">Oublier</string>
+    <string name="voices_forget_title">Oublier %1$s ?</string>
+    <string name="voices_forget_body">Jaco ne reconnaîtra plus cette voix. Les noms déjà donnés dans les enregistrements restent.</string>
+    <string name="speakers_find">Trouver les intervenants</string>
+    <string name="speakers_find_again">Retrouver les intervenants</string>
+    <string name="speakers_find_help">Jaco réécoute l\'audio pour trouver qui parle et quand. Indiquer le nombre de personnes rend le résultat plus fiable.</string>
+    <string name="speakers_count">Nombre de personnes</string>
+    <string name="speakers_count_auto">Auto</string>
+    <string name="speakers_start">Lancer</string>
+    <string name="speakers_share">%1$s, %2$d %%</string>
+    <string name="speakers_finding">Recherche des intervenants, %1$d %%</string>
+    <string name="speakers_wait_wifi">Intervenants : en attente du Wi-Fi pour télécharger les modèles (%1$s)</string>
+    <string name="speakers_downloading">Intervenants : téléchargement des modèles, %1$d %%</string>
+    <string name="speakers_download_failed">Intervenants : les modèles n\'ont pas pu être téléchargés</string>
+    <string name="speakers_soon">Les intervenants seront trouvés sous peu</string>
+    <string name="speakers_name_title">Qui est-ce ?</string>
+    <string name="speakers_merge_note">Un autre intervenant porte ce nom : les deux deviennent une seule personne.</string>
+    <string name="speakers_remember">Retenir cette voix</string>
+    <string name="speakers_remember_help">Pour la reconnaître dans vos prochains enregistrements. Reste sur ce téléphone.</string>
 </resources>

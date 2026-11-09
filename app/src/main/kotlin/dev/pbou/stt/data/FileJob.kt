@@ -67,6 +67,8 @@ class FileJob(
     private val keepAudio: suspend () -> Boolean,
     /** Returns once no recording is running (it holds its model in memory). */
     private val awaitNoRecording: suspend (onWait: () -> Unit) -> Unit,
+    /** A file was transcribed to the end (its library item is saved). */
+    private val onDone: suspend (itemId: String) -> Unit = {},
 ) {
     private val _state = MutableStateFlow<FileState?>(null)
     val state: StateFlow<FileState?> = _state.asStateFlow()
@@ -181,6 +183,7 @@ class FileJob(
                 it?.copy(phase = FileState.Phase.DONE, doneMs = it.durationMs ?: it.doneMs, elapsedMs = SystemClock.elapsedRealtime() - t0)
             }
             save(done = true)
+            itemId?.let { onDone(it) }
         } catch (e: CancellationException) {
             withContext(NonCancellable) { save(done = true) }
             throw e

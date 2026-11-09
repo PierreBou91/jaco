@@ -51,6 +51,10 @@ data class LibraryItem(
     val status: Status,
     /** A better transcription to make in the background, see [Improver]. */
     val improve: ImproveRequest? = null,
+    /** Who spoke when, found from the audio (see [SpeakerFinder]); null until found. */
+    val speakers: Speakers? = null,
+    /** Speakers to find in the background; null when there is nothing to do. */
+    val findSpeakers: SpeakersRequest? = null,
 ) {
     enum class Kind { RECORDING, FILE }
     enum class Status { RECORDING, TRANSCRIBING, DONE }
@@ -64,6 +68,25 @@ data class ImproveRequest(
     /** The language to tell the model ([dev.pbou.stt.engine.ModelSpec.AUTO] or a code); null: the settings' one. */
     val language: String? = null,
 )
+
+/** A request to find the speakers of an item. [count]: how many there are, null to let Jaco find out. */
+data class SpeakersRequest(val count: Int? = null)
+
+/** The speakers of an item: when each one spoke ([turns], indexes into [people]), and who they are. */
+data class Speakers(val turns: List<Turn>, val people: List<Person>, val count: Int?, val createdAt: Long) {
+    data class Turn(val startMs: Long, val endMs: Long, val speaker: Int)
+
+    /**
+     * One speaker. [name]: given in this item, null for "Speaker N". [voiceId]: the saved voice they were
+     * recognised as (its name wins, so renaming a saved voice renames it everywhere). [voice]: their voice
+     * embedding, kept to remember them later. [number]: "Speaker N" and their color, kept when others are
+     * merged so nobody changes number.
+     */
+    class Person(val name: String?, val voiceId: String?, val voice: FloatArray, val seconds: Float, val number: Int) {
+        fun copy(name: String? = this.name, voiceId: String? = this.voiceId, voice: FloatArray = this.voice, seconds: Float = this.seconds) =
+            Person(name, voiceId, voice, seconds, number)
+    }
+}
 
 /**
  * The recordings and transcribed files, one folder each under [root]: `item.json` and the audio if kept.
@@ -131,6 +154,8 @@ class Library(private val root: File) {
             .put("createdAt", i.createdAt).put("durationMs", i.durationMs).put("audio", i.audio ?: JSONObject.NULL)
             .put("shown", i.shown).put("status", i.status.name)
             .put("improve", i.improve?.let { JSONObject().put("model", it.modelId).put("whileCharging", it.whileCharging).put("language", it.language ?: JSONObject.NULL) } ?: JSONObject.NULL)
+            .put("speakers", i.speakers?.let(::speakersJson) ?: JSONObject.NULL)
+            .put("findSpeakers", i.findSpeakers?.let { JSONObject().put("count", it.count ?: JSONObject.NULL) } ?: JSONObject.NULL)
             .put("transcripts", JSONArray(i.transcripts.map { t ->
                 JSONObject().put("model", t.modelId).put("language", t.language ?: JSONObject.NULL).put("live", t.live)
                     .put("createdAt", t.createdAt)
@@ -163,8 +188,37 @@ class Library(private val root: File) {
                 shown = o.optInt("shown"),
                 status = LibraryItem.Status.valueOf(o.optString("status", "DONE")),
                 improve = o.optJSONObject("improve")?.let { ImproveRequest(it.getString("model"), it.optBoolean("whileCharging", true), it.optStringOrNull("language")) },
+                speakers = o.optJSONObject("speakers")?.let(::speakersFromJson),
+                findSpeakers = o.optJSONObject("findSpeakers")?.let { SpeakersRequest(it.optIntOrNull("count")) },
             )
         }
+
+        fun speakersJson(s: Speakers): JSONObject = JSONObject()
+            .put("count", s.count ?: JSONObject.NULL).put("createdAt", s.createdAt)
+            .put("turns", JSONArray(s.turns.map { JSONArray().put(it.startMs).put(it.endMs).put(it.speaker) }))
+            .put("people", JSONArray(s.people.map { p ->
+                JSONObject().put("name", p.name ?: JSONObject.NULL).put("voiceId", p.voiceId ?: JSONObject.NULL)
+                    .put("seconds", p.seconds.toDouble()).put("number", p.number).put("voice", Voices.vectorJson(p.voice))
+            }))
+
+        fun speakersFromJson(o: JSONObject): Speakers {
+            val turns = o.getJSONArray("turns")
+            val people = o.getJSONArray("people")
+            return Speakers(
+                turns = (0 until turns.length()).map { k -> turns.getJSONArray(k).let { Speakers.Turn(it.getLong(0), it.getLong(1), it.getInt(2)) } },
+                people = (0 until people.length()).map { k ->
+                    val p = people.getJSONObject(k)
+                    Speakers.Person(
+                        p.optStringOrNull("name"), p.optStringOrNull("voiceId"), Voices.vectorFromJson(p.getJSONArray("voice")),
+                        p.optDouble("seconds", 0.0).toFloat(), p.optInt("number", k + 1),
+                    )
+                },
+                count = o.optIntOrNull("count"),
+                createdAt = o.optLong("createdAt"),
+            )
+        }
+
+        fun JSONObject.optIntOrNull(key: String): Int? = if (!has(key) || isNull(key)) null else optInt(key)
 
         fun JSONObject.optStringOrNull(key: String): String? = if (isNull(key)) null else optString(key).takeIf { has(key) }
     }

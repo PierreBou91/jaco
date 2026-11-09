@@ -318,4 +318,33 @@
     <string name="home_saved">Saved in the Library</string>
     <string name="home_new">New page</string>
     <string name="action_open">Open</string>
+    <!-- Speakers (M4) -->
+    <string name="speaker_n">Speaker %1$d</string>
+    <string name="speakers_notif_channel">Finding speakers</string>
+    <string name="speakers_notif_title">Finding who spoke when</string>
+    <string name="speakers_models_name">Speaker models</string>
+    <string name="setting_speakers">Find speakers</string>
+    <string name="setting_speakers_summary">After each recording, find who spoke when, from the audio. Models: %1$s, downloaded once.</string>
+    <string name="setting_voices">Saved voices</string>
+    <string name="setting_voices_none">None yet: name a speaker in a recording to keep their voice</string>
+    <string name="voices_help">Jaco recognises these people in new recordings. Stored on this phone only.</string>
+    <string name="voices_forget">Forget</string>
+    <string name="voices_forget_title">Forget %1$s?</string>
+    <string name="voices_forget_body">Jaco will no longer recognise this voice. Names already given in recordings stay.</string>
+    <string name="speakers_find">Find speakers</string>
+    <string name="speakers_find_again">Find speakers again</string>
+    <string name="speakers_find_help">Jaco listens to the audio again to find who spoke when. Saying how many people there are makes it more reliable.</string>
+    <string name="speakers_count">Number of people</string>
+    <string name="speakers_count_auto">Auto</string>
+    <string name="speakers_start">Start</string>
+    <string name="speakers_share">%1$s, %2$d%%</string>
+    <string name="speakers_finding">Finding speakers, %1$d%%</string>
+    <string name="speakers_wait_wifi">Speakers: waiting for Wi-Fi to download the models (%1$s)</string>
+    <string name="speakers_downloading">Speakers: downloading the models, %1$d%%</string>
+    <string name="speakers_download_failed">Speakers: the models could not be downloaded</string>
+    <string name="speakers_soon">Speakers will be found shortly</string>
+    <string name="speakers_name_title">Who is it?</string>
+    <string name="speakers_merge_note">Another speaker has this name: both become one person.</string>
+    <string name="speakers_remember">Remember this voice</string>
+    <string name="speakers_remember_help">To recognise them in your next recordings. Stays on this phone.</string>
 </resources>

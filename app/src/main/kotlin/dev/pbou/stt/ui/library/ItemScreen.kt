@@ -80,6 +80,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pbou.stt.R
 import dev.pbou.stt.data.LibraryItem
 import dev.pbou.stt.data.LibraryText
+import dev.pbou.stt.data.SpeakerText
 import dev.pbou.stt.data.Transcript
 import dev.pbou.stt.engine.FileTranscriber
 import dev.pbou.stt.engine.ModelSpec
@@ -98,6 +99,8 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
     var deleting by rememberSaveable { mutableStateOf(false) }
     var again by rememberSaveable { mutableStateOf(false) }
     var deletingAudio by rememberSaveable { mutableStateOf(false) }
+    var findingDialog by rememberSaveable { mutableStateOf(false) }
+    var naming by rememberSaveable { mutableStateOf<Int?>(null) }
     val cannotContinue = stringResource(R.string.rec_cannot_continue)
     val micDenied = stringResource(R.string.mic_permission_denied)
     fun continueNow() = scope.launch { if (!vm.continueRecording()) snackbar.showSnackbar(cannotContinue) }
@@ -115,6 +118,14 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
     WatchRecording(active = recording != null, onWatching = vm::watching)
     val segments = item?.transcript?.segments.orEmpty()
     val partial = recording?.partial.orEmpty()
+    // Who said each sentence, once the speakers are found.
+    val speakers = item?.speakers
+    val who = remember(speakers, segments) { speakers?.let { SpeakerText.speakerOf(segments, it) } ?: segments.map { null } }
+    val names = remember(speakers, ui.voices) {
+        speakers?.let { sp -> SpeakerText.names(sp, { id -> ui.voices.firstOrNull { it.id == id }?.name }, { context.getString(R.string.speaker_n, it) }) }.orEmpty()
+    }
+    val showSpeakers = SpeakerText.worthShowing(who)
+    val starts = remember(who) { turnStarts(who) }
     val list = rememberLazyListState()
     // While recording, follow the new sentences.
     LaunchedEffect(segments.size, partial.isNotEmpty()) {
@@ -145,6 +156,9 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
                             canTranscribeAgain = player.ready && ui.installed.isNotEmpty(),
                             canContinue = item.kind == LibraryItem.Kind.RECORDING && ui.installed.isNotEmpty(),
                             hasAudio = item.audio != null,
+                            canFindSpeakers = player.ready && item.findSpeakers == null,
+                            hasSpeakers = speakers != null,
+                            onFindSpeakers = { findingDialog = true },
                             onCopy = { timestamps ->
                                 vm.copyText(context, timestamps)
                                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) scope.launch { snackbar.showSnackbar(copied) }
@@ -180,6 +194,12 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
                     onImproveNow = vm::improveNow,
                     onCancelImprove = vm::cancelImprove,
                 )
+                if (item.findSpeakers != null && recording == null) {
+                    FindingSpeakers(ui.findingSpeakers, ui.speakerModels, onCancel = vm::cancelSpeakers)
+                }
+                if (showSpeakers && speakers != null) {
+                    SpeakerSummary(speakers, names, who, onName = { naming = it })
+                }
                 ui.recordingProblem?.let { problem ->
                     Problem(problem, onDismiss = vm::dismissProblem)
                 }
@@ -203,6 +223,10 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
             itemsIndexed(segments, key = { i, s -> "${item.shown}-$i-${s.startMs}" }) { i, s ->
                 val next = segments.getOrNull(i + 1)?.startMs ?: Long.MAX_VALUE
                 val active = player.ready && (player.playing || player.positionMs > 0) && player.positionMs >= s.startMs && player.positionMs < next
+                val speaker = who.getOrNull(i)
+                if (showSpeakers && speaker != null && starts.getOrElse(i) { false }) {
+                    SpeakerLabel(names[speaker], speakers!!.people[speaker].number, onClick = { naming = speaker })
+                }
                 SegmentRow(s, active = active, onClick = if (player.ready) ({ vm.playFrom(s.startMs) }) else null)
             }
             if (partial.isNotEmpty()) item(key = "partial") { PartialRow(partial) }
@@ -229,6 +253,29 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
             confirmButton = { TextButton(onClick = { deletingAudio = false; vm.deleteAudio(context) }) { Text(stringResource(R.string.action_delete)) } },
             dismissButton = { TextButton(onClick = { deletingAudio = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
+    }
+    if (findingDialog) {
+        FindSpeakersDialog(current = speakers?.count, onDismiss = { findingDialog = false }) { count ->
+            findingDialog = false
+            vm.findSpeakers(count)
+        }
+    }
+    naming?.let { index ->
+        if (speakers != null && index in speakers.people.indices) {
+            NameSpeakerDialog(
+                index = index,
+                number = speakers.people[index].number,
+                current = speakers.people[index].let { p -> p.voiceId?.let { id -> ui.voices.firstOrNull { it.id == id }?.name } ?: p.name },
+                fallback = names.getOrElse(index) { "" },
+                suggestions = (ui.voices.map { it.name } + names.filterIndexed { i, _ -> i != index && speakers.people[i].let { it.name != null || it.voiceId != null } })
+                    .distinctBy { it.lowercase() }.sortedBy { it.lowercase() },
+                others = names.filterIndexed { i, _ -> i != index },
+                onDismiss = { naming = null },
+            ) { name, remember ->
+                naming = null
+                vm.nameSpeaker(index, name, remember)
+            }
+        } else naming = null
     }
     if (again && item != null) {
         AgainDialog(ui.installed, current = item.transcript?.modelId, defaultLanguage = vm::defaultLanguage, onDismiss = { again = false }) { spec, language ->
@@ -397,6 +444,9 @@ private fun MoreMenu(
     canTranscribeAgain: Boolean,
     canContinue: Boolean,
     hasAudio: Boolean,
+    canFindSpeakers: Boolean,
+    hasSpeakers: Boolean,
+    onFindSpeakers: () -> Unit,
     onCopy: (timestamps: Boolean) -> Unit,
     onRename: () -> Unit,
     onAgain: () -> Unit,
@@ -436,6 +486,11 @@ private fun MoreMenu(
                 text = { Text(stringResource(R.string.lib_again)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_auto_awesome), contentDescription = null) },
                 onClick = { open = false; onAgain() },
+            )
+            if (canFindSpeakers) DropdownMenuItem(
+                text = { Text(stringResource(if (hasSpeakers) R.string.speakers_find_again else R.string.speakers_find)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_groups), contentDescription = null) },
+                onClick = { open = false; onFindSpeakers() },
             )
             if (hasAudio) DropdownMenuItem(
                 text = { Text(stringResource(R.string.lib_delete_audio)) },

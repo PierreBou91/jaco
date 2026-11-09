@@ -30,6 +30,8 @@ import dev.pbou.stt.MainActivity
 import dev.pbou.stt.R
 import dev.pbou.stt.SttApplication
 import dev.pbou.stt.engine.CorruptDownloadException
+import dev.pbou.stt.engine.Installable
+import dev.pbou.stt.engine.SpeakerModels
 import dev.pbou.stt.engine.ModelCatalog
 import dev.pbou.stt.engine.ModelInstaller
 import dev.pbou.stt.engine.ModelSpec
@@ -80,7 +82,7 @@ class Downloads(private val context: Context, private val store: ModelStore) {
     val states: Flow<Map<String, DownloadState>> =
         combine(work.getWorkInfosByTagFlow(TAG), onWifi) { infos, _ -> infos.mapNotNull(::toState).toMap() }
 
-    fun start(spec: ModelSpec, wifiOnly: Boolean) {
+    fun start(spec: Installable, wifiOnly: Boolean) {
         val request = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(workDataOf(KEY_MODEL to spec.id, KEY_WIFI_ONLY to wifiOnly))
             .setConstraints(
@@ -98,12 +100,12 @@ class Downloads(private val context: Context, private val store: ModelStore) {
     }
 
     /** Stops the download and keeps what was downloaded, so [start] resumes it. */
-    fun pause(spec: ModelSpec) {
+    fun pause(spec: Installable) {
         work.cancelUniqueWork(name(spec))
     }
 
     /** Stops the download and deletes what was downloaded. */
-    suspend fun discard(spec: ModelSpec) {
+    suspend fun discard(spec: Installable) {
         work.cancelUniqueWork(name(spec))
         work.getWorkInfosForUniqueWorkFlow(name(spec)).first { infos -> infos.all { it.state.isFinished } }
         work.pruneWork()
@@ -145,15 +147,17 @@ class Downloads(private val context: Context, private val store: ModelStore) {
         const val KEY_TOTAL = "total"
         const val KEY_REASON = "reason"
 
-        fun name(spec: ModelSpec) = "download-${spec.id}"
-        fun modelTag(spec: ModelSpec) = MODEL_TAG + spec.id
+        fun name(spec: Installable) = "download-${spec.id}"
+        fun modelTag(spec: Installable) = MODEL_TAG + spec.id
     }
 }
 
 class ModelDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     private val graph get() = (applicationContext as SttApplication).graph
-    private val spec: ModelSpec? get() = ModelCatalog.byId(inputData.getString(Downloads.KEY_MODEL))
+    private val spec: Installable? get() = inputData.getString(Downloads.KEY_MODEL).let { id ->
+        ModelCatalog.byId(id) ?: SpeakerModels.takeIf { it.id == id }
+    }
 
     override suspend fun doWork(): Result {
         val spec = spec ?: return Result.failure()
@@ -169,8 +173,13 @@ class ModelDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
                     runCatching { setForegroundAsync(foregroundInfo(spec, Triple(phase, done, total))) }
                 }
             }
-            graph.onModelInstalled(spec)
-            notifyDone(spec)
+            when (spec) {
+                is ModelSpec -> {
+                    graph.onModelInstalled(spec)
+                    notifyDone(spec)
+                }
+                else -> graph.onSpeakerModelsInstalled() // a helper download: no "ready" notification
+            }
             Result.success()
         } catch (e: CancellationException) {
             throw e
@@ -188,7 +197,7 @@ class ModelDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
 
     private fun fail(reason: FailReason) = Result.failure(workDataOf(Downloads.KEY_REASON to reason.name))
 
-    private fun foregroundInfo(spec: ModelSpec, progress: Triple<ModelInstaller.Phase, Long, Long>?): ForegroundInfo {
+    private fun foregroundInfo(spec: Installable, progress: Triple<ModelInstaller.Phase, Long, Long>?): ForegroundInfo {
         val ctx = applicationContext
         val text = progress?.let { (phase, done, total) ->
             when (phase) {
@@ -199,7 +208,7 @@ class ModelDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
         } ?: ctx.getString(R.string.download_starting)
         val notification = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_download)
-            .setContentTitle(ctx.getString(R.string.notif_title, spec.name))
+            .setContentTitle(ctx.getString(R.string.notif_title, if (spec is ModelSpec) spec.name else ctx.getString(R.string.speakers_models_name)))
             .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -230,7 +239,7 @@ class ModelDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
         const val MAX_RETRIES = 5
 
         fun percent(done: Long, total: Long) = if (total <= 0) 0 else (done * 100 / total).toInt()
-        fun notificationId(spec: ModelSpec) = 1000 + (spec.id.hashCode() and 0xffff) * 2
+        fun notificationId(spec: Installable) = 1000 + (spec.id.hashCode() and 0xffff) * 2
 
         fun openApp(ctx: Context): PendingIntent = PendingIntent.getActivity(
             ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),

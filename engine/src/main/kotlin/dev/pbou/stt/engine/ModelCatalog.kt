@@ -176,8 +176,29 @@ enum class License(val label: String, val url: String) {
     APACHE_2("Apache 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
 }
 
-/** One file of an installed model, relative to the model's folder. */
-data class ModelFile(val path: String, val size: Long, val sha256: String)
+/**
+ * One file of an installed model, relative to the model's folder. [url] overrides where it is fetched
+ * from (a pack whose files live in different repositories); null: the source's base URL plus [path].
+ */
+data class ModelFile(val path: String, val size: Long, val sha256: String, val url: String? = null)
+
+/** Anything [ModelInstaller] can download and check: a speech model, or the speaker models. */
+interface Installable {
+    val id: String
+    val name: String
+    val source: ModelSource
+    val files: List<ModelFile>
+
+    /** Space taken once installed. */
+    val installBytes: Long get() = files.sumOf { it.size }
+
+    /** Bytes to fetch over the network. */
+    val downloadBytes: Long
+        get() = when (val s = source) {
+            is ModelSource.Files -> installBytes
+            is ModelSource.Archive -> s.size
+        }
+}
 
 sealed interface ModelSource {
     /** Each file is fetched from `baseUrl/path`, resumable file by file. */
@@ -207,28 +228,19 @@ sealed interface Languages {
 data class Bench(val werPercent: Double, val phoneRtf: Double, val loadSeconds: Double)
 
 data class ModelSpec(
-    val id: String,
-    val name: String,
+    override val id: String,
+    override val name: String,
     val maker: String,
     val license: License,
     val kind: EngineKind,
-    val source: ModelSource,
-    val files: List<ModelFile>,
+    override val source: ModelSource,
+    override val files: List<ModelFile>,
     val languages: Languages,
     val punctuation: Boolean,
     val featureDim: Int = 80,
     val bench: Bench? = null,
     val recommended: Boolean = false,
-) {
-    /** Space taken once installed. */
-    val installBytes: Long get() = files.sumOf { it.size }
-
-    /** Bytes to fetch over the network. */
-    val downloadBytes: Long
-        get() = when (source) {
-            is ModelSource.Files -> installBytes
-            is ModelSource.Archive -> source.size
-        }
+) : Installable {
 
     /**
      * The language code to pass to the model, or null to let it detect the language.

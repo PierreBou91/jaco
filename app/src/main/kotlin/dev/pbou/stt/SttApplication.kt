@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.LocaleList
 import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.BenchStore
+import dev.pbou.stt.data.DownloadState
 import dev.pbou.stt.data.Downloads
 import dev.pbou.stt.data.FileJob
 import dev.pbou.stt.data.Improver
@@ -12,8 +13,11 @@ import dev.pbou.stt.data.Library
 import dev.pbou.stt.data.LibraryItem
 import dev.pbou.stt.data.Recorder
 import dev.pbou.stt.data.SettingsRepository
+import dev.pbou.stt.data.SpeakerFinder
+import dev.pbou.stt.data.Voices
 import dev.pbou.stt.engine.Benchmark
 import dev.pbou.stt.engine.ClipRecorder
+import dev.pbou.stt.engine.Diarizer
 import dev.pbou.stt.engine.EngineHost
 import dev.pbou.stt.engine.EngineOptions
 import dev.pbou.stt.engine.FileTranscriber
@@ -25,6 +29,7 @@ import dev.pbou.stt.engine.ModelInstaller
 import dev.pbou.stt.engine.ModelSpec
 import dev.pbou.stt.engine.ModelStore
 import dev.pbou.stt.engine.RecordingSession
+import dev.pbou.stt.engine.SpeakerModels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -67,7 +72,10 @@ class AppGraph(app: Application) {
     val fileTranscriber = FileTranscriber(app.assets, host)
     val library = Library(File(app.filesDir, "library"))
     val improver = Improver(app, library)
-    val recorder = Recorder(app, scope, library, RecordingSession(app.assets, host), onSaved = ::autoImprove)
+    val voices = Voices(File(app.filesDir, "voices.json"))
+    val diarizer = Diarizer(store)
+    val speakerFinder = SpeakerFinder(app, library)
+    val recorder = Recorder(app, scope, library, RecordingSession(app.assets, host), onSaved = { autoImprove(it); autoSpeakers(it) })
     val files = FileJob(
         app, scope, fileTranscriber,
         defaultModel = { fileModel(settings.filterNotNull().first()) },
@@ -86,6 +94,7 @@ class AppGraph(app: Application) {
                 recorder.itemId.first { it == null }
             }
         },
+        onDone = { id -> library.get(id)?.takeIf { it.speakers == null }?.let { autoSpeakers(it) } },
     )
 
     /** The session the home screen shows when nothing is recording (cleared by its "New" button). */
@@ -122,6 +131,25 @@ class AppGraph(app: Application) {
         improver.request(item.id, model, language = null, whileCharging = true)
     }
 
+    /** An item was saved with its audio (a recording, continued or not, or a file): find its speakers if the settings ask. */
+    private suspend fun autoSpeakers(item: LibraryItem) {
+        val s = awaitSettings()
+        if (!s.findSpeakers || item.audio == null) return
+        speakerFinder.request(item.id, item.speakers?.count)
+        ensureSpeakerModels()
+    }
+
+    /** Fetches the speaker models if they are missing and not on their way (over Wi-Fi if the settings say so). */
+    suspend fun ensureSpeakerModels() {
+        if (store.isInstalled(SpeakerModels)) return
+        val state = downloads.states.first()[SpeakerModels.id]
+        if (state != null && state !is DownloadState.Failed) return // already on its way
+        downloads.start(SpeakerModels, awaitSettings().wifiOnly)
+    }
+
+    /** The speaker models are in: run the searches that waited for them. */
+    fun onSpeakerModelsInstalled() = speakerFinder.schedule()
+
     /** Asks the UI to show the file screen (a file was shared to the app). */
     val showFile = Channel<Unit>(Channel.CONFLATED)
 
@@ -140,13 +168,20 @@ class AppGraph(app: Application) {
             library.load()
             recorder.recover()
             improver.schedule()
+            voices.load()
+            speakerFinder.schedule()
         }
         scope.launch { settings.filterNotNull().collect { recorder.allowPreview(it.livePreview) } }
         // Dictation, the keyboard or a recording starts: a background improvement steps aside.
         scope.launch {
             combine(keyboardLive.state, recorder.itemId, files.state) { k, r, f ->
                 k.phase != LiveTranscriber.Phase.IDLE || r != null || f?.busy == true
-            }.collect { busy -> if (busy) improver.yieldEngine() }
+            }.collect { busy ->
+                if (busy) {
+                    improver.yieldEngine()
+                    speakerFinder.yieldEngine()
+                }
+            }
         }
     }
 

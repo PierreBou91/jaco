@@ -245,14 +245,6 @@ fun SettingsScreen(vm: SettingsViewModel, onLicenses: () -> Unit, onBenchmark: (
                     onClick = onBenchmark,
                 )
             }
-            item {
-                SwitchItem(
-                    title = stringResource(R.string.setting_timings),
-                    summary = stringResource(R.string.setting_timings_summary),
-                    icon = R.drawable.ic_timer,
-                    checked = s.showTimings,
-                ) { v -> vm.update { it.copy(showTimings = v) } }
-            }
 
             item { SectionHeader(stringResource(R.string.settings_about)) }
             item {

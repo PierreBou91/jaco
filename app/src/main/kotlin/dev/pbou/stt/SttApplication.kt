@@ -33,7 +33,6 @@ import dev.pbou.stt.engine.SpeakerModels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.channels.Channel
@@ -96,9 +95,6 @@ class AppGraph(app: Application) {
         },
         onDone = { id -> library.get(id)?.takeIf { it.speakers == null }?.let { autoSpeakers(it) } },
     )
-
-    /** The session the home screen shows when nothing is recording (cleared by its "New" button). */
-    val homeItemId = MutableStateFlow<String?>(null)
 
     /** Asks the UI to show a library item (from the recording notification). */
     val showItem = Channel<String>(Channel.CONFLATED)

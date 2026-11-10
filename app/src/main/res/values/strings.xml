@@ -4,7 +4,7 @@
     <string name="app_name">Jaco</string>
 
     <!-- Navigation -->
-    <string name="nav_dictate">Dictate</string>
+    <string name="nav_dictate">Record</string>
     <string name="nav_models">Models</string>
     <string name="nav_settings">Settings</string>
 
@@ -32,10 +32,8 @@
 
     <!-- Dictate -->
     <string name="empty_title">Ready when you are</string>
-    <string name="empty_body">Tap the microphone and start talking. Your voice is transcribed right here, on this phone.</string>
-    <string name="start_speaking">Start speaking…</string>
-    <string name="status_idle">Tap to dictate</string>
-    <string name="status_continue">Tap to continue</string>
+    <string name="empty_body">Tap the microphone and start talking. Each recording is transcribed on this phone, with its times, and kept in the Library.</string>
+    <string name="status_idle">Tap to record</string>
     <string name="status_listening">Listening</string>
     <string name="status_listening_loading">Listening. The model is still loading.</string>
     <string name="status_finishing">Finishing the last sentence</string>
@@ -54,7 +52,6 @@
     <string name="mic_permission_denied">Dictation needs access to the microphone.</string>
     <string name="mic_unavailable">The microphone is not available. Another app may be using it.</string>
     <string name="timing_last">Last sentence: %1$s s of audio, transcribed in %2$s ms</string>
-    <string name="timing_load">Model loaded in %1$s s with %2$d cores</string>
 
     <!-- First run -->
     <string name="first_run_title">Get a speech model</string>
@@ -152,8 +149,6 @@
     <string name="setting_keep_loaded_summary">Dictation starts instantly, but the model stays in memory.</string>
     <string name="setting_wifi_only">Download on Wi-Fi only</string>
     <string name="setting_wifi_only_summary">Models weigh between 200 MB and 3 GB.</string>
-    <string name="setting_timings">Show timings</string>
-    <string name="setting_timings_summary">How long each sentence took to transcribe.</string>
     <string name="setting_licenses">Open-source licences</string>
     <string name="setting_licenses_summary">The models and software this app is built on.</string>
     <string name="setting_version">Version</string>
@@ -315,8 +310,6 @@
     <string name="lib_delete_audio_body">The text stays. Without the audio, it can no longer be played, shared as audio or transcribed again.</string>
     <string name="lib_again_language">Language</string>
     <string name="lib_audio_space">Audio: %1$s</string>
-    <string name="home_saved">Saved in the Library</string>
-    <string name="home_new">New page</string>
     <string name="action_open">Open</string>
     <!-- Speakers (M4) -->
     <string name="speaker_n">Speaker %1$d</string>
@@ -347,4 +340,7 @@
     <string name="speakers_merge_note">Another speaker has this name: both become one person.</string>
     <string name="speakers_remember">Remember this voice</string>
     <string name="speakers_remember_help">To recognise them in your next recordings. Stays on this phone.</string>
+    <string name="home_recording">Recording, %1$s</string>
+    <string name="home_paused">Recording paused, %1$s</string>
+    <string name="home_open_recording">Back to the recording</string>
 </resources>

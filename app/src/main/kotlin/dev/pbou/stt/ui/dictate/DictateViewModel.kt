@@ -6,7 +6,6 @@ import dev.pbou.stt.AppGraph
 import dev.pbou.stt.data.AppSettings
 import dev.pbou.stt.data.DownloadState
 import dev.pbou.stt.data.LibraryItem
-import dev.pbou.stt.data.LibraryText
 import dev.pbou.stt.engine.EngineHost
 import dev.pbou.stt.engine.EngineOptions
 import dev.pbou.stt.engine.ModelCatalog
@@ -28,9 +27,8 @@ data class DictateUi(
     val options: EngineOptions? = null,
     val installed: List<ModelSpec> = emptyList(),
     val engine: EngineHost.State = EngineHost.State.Empty,
-    /** The session on screen: the one recording, else the last one started here (until "New"). */
+    /** The recording in progress, if any (started here, from a notification, or continued). */
     val item: LibraryItem? = null,
-    /** The recorder, when [item] is the one recording. */
     val session: RecordingSession.State? = null,
     val problem: RecordingSession.Problem? = null,
     /** Download state of the recommended model, for the first-run card. */
@@ -42,18 +40,13 @@ data class DictateUi(
     val paused get() = phase == RecordingSession.Phase.PAUSED
     val finishing get() = phase == RecordingSession.Phase.FINISHING
     val busy get() = phase != RecordingSession.Phase.IDLE
-    val segments get() = item?.transcript?.segments.orEmpty()
-    val hasText get() = segments.isNotEmpty()
-    val partial get() = session?.partial.orEmpty()
-    /** The text as it reads, in paragraphs at long pauses. */
-    val text get() = LibraryText.plain(segments)
     val engineLoading get() = engine is EngineHost.State.Loading
 }
 
 /**
- * The home screen: talk, see the words, copy or share them. Every session is a recording in the
- * [dev.pbou.stt.data.Library] (dictation and recordings are one thing): it goes on in the background
- * with a notification, and shows the sentence being spoken only while this screen is visible.
+ * The home screen: choose the model, start a recording. Every recording goes to the
+ * [dev.pbou.stt.data.Library] and is followed on its own screen (times, pause, stop); it goes on in the
+ * background with a notification.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DictateViewModel(private val graph: AppGraph) : ViewModel() {
@@ -62,10 +55,7 @@ class DictateViewModel(private val graph: AppGraph) : ViewModel() {
         Inputs(s, m, i, d, w)
     }
 
-    /** What the screen follows: the recording in progress, else the last session of this screen. */
-    private val shownId = combine(graph.recorder.itemId, graph.homeItemId) { rec, home -> rec ?: home }
-
-    private val shown = shownId.flatMapLatest { id -> if (id == null) flowOf(null) else graph.library.item(id) }
+    private val shown = graph.recorder.itemId.flatMapLatest { id -> if (id == null) flowOf(null) else graph.library.item(id) }
 
     val ui: StateFlow<DictateUi> = combine(
         inputs, graph.host.state, shown,
@@ -102,30 +92,8 @@ class DictateViewModel(private val graph: AppGraph) : ViewModel() {
         if (u.settings.keepLoaded && !graph.recorder.isActive) graph.host.preload(model, options)
     }
 
-    /** Continues the session on screen, or starts a new one. False if it could not start. */
-    suspend fun start(): Boolean {
-        val current = ui.value.item
-        if (current != null && current.kind == LibraryItem.Kind.RECORDING && current.status == LibraryItem.Status.DONE &&
-            graph.continueRecording(current.id)
-        ) return true
-        val id = graph.startRecording() ?: return false
-        graph.homeItemId.value = id
-        return true
-    }
-
-    fun stop() = graph.recorder.stop()
-    fun pause() = graph.recorder.pause()
-    fun resume() = graph.recorder.resume()
-
-    /** The next session starts afresh; this one stays in the Library. Returns its id, to open it. */
-    fun startNew(): String? {
-        if (ui.value.busy) return null
-        val id = graph.homeItemId.value
-        graph.homeItemId.value = null
-        return id
-    }
-
-    fun watching(on: Boolean) = graph.recorder.watching(on)
+    /** Starts a new recording; returns its library id (to open it), or null if no model is installed. */
+    suspend fun start(): String? = graph.startRecording()
 
     fun selectModel(spec: ModelSpec) {
         viewModelScope.launch { graph.settingsRepo.update { it.copy(defaultModelId = spec.id) } }

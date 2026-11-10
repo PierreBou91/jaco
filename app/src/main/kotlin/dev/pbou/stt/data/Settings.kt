@@ -39,7 +39,6 @@ data class AppSettings(
     /** Keep the model in memory between dictations, so the next one starts instantly. */
     val keepLoaded: Boolean = true,
     val wifiOnly: Boolean = true,
-    val showTimings: Boolean = false,
     /** The keyboard starts listening as soon as it opens. */
     val keyboardAutoStart: Boolean = true,
     /** Recordings keep their audio (playback, sharing, a better transcription later). Off: only the text. */
@@ -96,7 +95,6 @@ class SettingsRepository(private val context: Context) {
         val threads = intPreferencesKey("threads")
         val keepLoaded = booleanPreferencesKey("keep_loaded")
         val wifiOnly = booleanPreferencesKey("wifi_only")
-        val timings = booleanPreferencesKey("show_timings")
         val keyboardAutoStart = booleanPreferencesKey("keyboard_auto_start")
         val keepAudio = booleanPreferencesKey("keep_audio")
         val improveModel = stringPreferencesKey("improve_model")
@@ -117,7 +115,6 @@ class SettingsRepository(private val context: Context) {
             if (s.threads == null) prefs.remove(Keys.threads) else prefs[Keys.threads] = s.threads
             prefs[Keys.keepLoaded] = s.keepLoaded
             prefs[Keys.wifiOnly] = s.wifiOnly
-            prefs[Keys.timings] = s.showTimings
             prefs[Keys.keyboardAutoStart] = s.keyboardAutoStart
             prefs[Keys.keepAudio] = s.keepAudio
             if (s.improveModelId == null) prefs.remove(Keys.improveModel) else prefs[Keys.improveModel] = s.improveModelId
@@ -138,7 +135,6 @@ class SettingsRepository(private val context: Context) {
             threads = p[Keys.threads]?.takeIf { it in AppSettings.THREADS } ?: d.threads,
             keepLoaded = p[Keys.keepLoaded] ?: d.keepLoaded,
             wifiOnly = p[Keys.wifiOnly] ?: d.wifiOnly,
-            showTimings = p[Keys.timings] ?: d.showTimings,
             keyboardAutoStart = p[Keys.keyboardAutoStart] ?: d.keyboardAutoStart,
             keepAudio = p[Keys.keepAudio] ?: d.keepAudio,
             improveModelId = p[Keys.improveModel],

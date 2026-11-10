@@ -33,12 +33,12 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   Jaco then opens in the field by itself. With a permission given once from a computer
   (`adb shell pm grant dev.pbou.stt android.permission.WRITE_SECURE_SETTINGS`), the tile switches in one
   tap, to Jaco and back.
-- **Dictate and Library** (M3): one way to talk. The home mic starts a session that is saved in the Library like
-  any recording: words appear live while the screen shows them, and it goes on in the background (screen off,
-  another app) with a notification (pause, resume, stop), transcribing sentence by sentence without the live
-  preview to save battery over hours. The mic after a stop continues the same session; "New page" starts afresh.
+- **Record and Library** (M3): the home screen chooses the model and starts a recording, which opens on its
+  own screen at once: sentences appear with their times, pause and stop stay pinned at the bottom, and the
+  words of the sentence being spoken show while the screen is visible. It goes on in the background (screen
+  off, another app) with a notification (pause, resume, stop), and every recording goes to the Library.
   Sentences are cut at pauses, and at the quietest moment if someone talks for over 25 s without one (calls).
-  The Library lists every session and transcribed file, newest first, with search (accents and case ignored)
+  The Library lists every recording and transcribed file, newest first, with search (accents and case ignored)
   and the space taken by audio. "Keep the audio" (on by default) saves it as M4A (AAC, 48 kbps, about 22 MB per
   hour), written so that a crash or a dead battery loses nothing already recorded. A recording's screen keeps
   pause and stop pinned at the bottom while recording; afterwards: playback (tap a sentence to hear it), copy
@@ -53,7 +53,7 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   again" can be told how many people there are. Models: pyannote segmentation 3.0 and TitaNet small (42 MB,
   downloaded on first use). How they were chosen: [docs/speakers.md](docs/speakers.md).
 - **Settings**: keyboard, language, model for files, end-of-sentence pause, live preview, CPU cores (defaults
-  to the count measured fastest, usually 4: more cores is slower on phones), keep the model in memory, timings.
+  to the count measured fastest, usually 4: more cores is slower on phones), keep the model in memory.
 - Dark theme with an orange accent, Inter font, English and French UI.
 
 ## Build

@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Jaco</string>
 
-    <string name="nav_dictate">Dictée</string>
+    <string name="nav_dictate">Enregistrer</string>
     <string name="nav_models">Modèles</string>
     <string name="nav_settings">Réglages</string>
 
@@ -28,10 +28,8 @@
     <string name="action_use_mobile_data">Utiliser les données mobiles</string>
 
     <string name="empty_title">Quand vous voulez</string>
-    <string name="empty_body">Touchez le micro et parlez. Votre voix est transcrite ici même, sur ce téléphone.</string>
-    <string name="start_speaking">Commencez à parler…</string>
-    <string name="status_idle">Touchez pour dicter</string>
-    <string name="status_continue">Touchez pour continuer</string>
+    <string name="empty_body">Touchez le micro et parlez. Chaque enregistrement est transcrit sur ce téléphone, avec les heures, et gardé dans la bibliothèque.</string>
+    <string name="status_idle">Touchez pour enregistrer</string>
     <string name="status_listening">À l\'écoute</string>
     <string name="status_listening_loading">À l\'écoute. Le modèle finit de se charger.</string>
     <string name="status_finishing">Fin de la dernière phrase</string>
@@ -50,7 +48,6 @@
     <string name="mic_permission_denied">La dictée a besoin d\'accéder au micro.</string>
     <string name="mic_unavailable">Le micro n\'est pas disponible. Une autre application l\'utilise peut-être.</string>
     <string name="timing_last">Dernière phrase : %1$s s d\'audio, transcrite en %2$s ms</string>
-    <string name="timing_load">Modèle chargé en %1$s s avec %2$d cœurs</string>
 
     <string name="first_run_title">Installez un modèle de reconnaissance</string>
     <string name="first_run_body">La reconnaissance vocale fonctionne entièrement sur ce téléphone, elle a donc besoin d\'un modèle. Il suffit de le télécharger une fois.</string>
@@ -144,8 +141,6 @@
     <string name="setting_keep_loaded_summary">La dictée démarre tout de suite, mais le modèle reste en mémoire.</string>
     <string name="setting_wifi_only">Télécharger en Wi-Fi uniquement</string>
     <string name="setting_wifi_only_summary">Les modèles pèsent entre 200 Mo et 3 Go.</string>
-    <string name="setting_timings">Afficher les durées</string>
-    <string name="setting_timings_summary">Le temps mis pour transcrire chaque phrase.</string>
     <string name="setting_licenses">Licences open source</string>
     <string name="setting_licenses_summary">Les modèles et logiciels sur lesquels repose l\'application.</string>
     <string name="setting_version">Version</string>
@@ -307,8 +302,6 @@
     <string name="lib_delete_audio_body">Le texte reste. Sans l\'audio, il ne peut plus être réécouté, partagé en audio ni retranscrit.</string>
     <string name="lib_again_language">Langue</string>
     <string name="lib_audio_space">Audio\u00A0: %1$s</string>
-    <string name="home_saved">Enregistré dans la bibliothèque</string>
-    <string name="home_new">Nouvelle page</string>
     <string name="action_open">Ouvrir</string>
     <!-- Intervenants (M4) -->
     <string name="speaker_n">Intervenant %1$d</string>
@@ -339,4 +332,7 @@
     <string name="speakers_merge_note">Un autre intervenant porte ce nom : les deux deviennent une seule personne.</string>
     <string name="speakers_remember">Retenir cette voix</string>
     <string name="speakers_remember_help">Pour la reconnaître dans vos prochains enregistrements. Reste sur ce téléphone.</string>
+    <string name="home_recording">Enregistrement en cours, %1$s</string>
+    <string name="home_paused">Enregistrement en pause, %1$s</string>
+    <string name="home_open_recording">Revenir à l\'enregistrement</string>
 </resources>

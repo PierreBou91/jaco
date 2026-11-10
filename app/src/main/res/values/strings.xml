@@ -344,4 +344,5 @@
     <string name="home_recording">Recording, %1$s</string>
     <string name="home_paused">Recording paused, %1$s</string>
     <string name="home_open_recording">Back to the recording</string>
+    <string name="speakers_splitting">Splitting sentences by speaker, %1$d%%</string>
 </resources>

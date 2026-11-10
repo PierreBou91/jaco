@@ -69,8 +69,11 @@ data class ImproveRequest(
     val language: String? = null,
 )
 
-/** A request to find the speakers of an item. [count]: how many there are, null to let Jaco find out. */
-data class SpeakersRequest(val count: Int? = null)
+/**
+ * A request to find the speakers of an item. [count]: how many there are, null to let Jaco find out.
+ * [splitOnly]: the speakers are known, only split a new version's sentences by speaker ([SentenceSplit]).
+ */
+data class SpeakersRequest(val count: Int? = null, val splitOnly: Boolean = false)
 
 /** The speakers of an item: when each one spoke ([turns], indexes into [people]), and who they are. */
 data class Speakers(val turns: List<Turn>, val people: List<Person>, val count: Int?, val createdAt: Long) {
@@ -155,7 +158,7 @@ class Library(private val root: File) {
             .put("shown", i.shown).put("status", i.status.name)
             .put("improve", i.improve?.let { JSONObject().put("model", it.modelId).put("whileCharging", it.whileCharging).put("language", it.language ?: JSONObject.NULL) } ?: JSONObject.NULL)
             .put("speakers", i.speakers?.let(::speakersJson) ?: JSONObject.NULL)
-            .put("findSpeakers", i.findSpeakers?.let { JSONObject().put("count", it.count ?: JSONObject.NULL) } ?: JSONObject.NULL)
+            .put("findSpeakers", i.findSpeakers?.let { JSONObject().put("count", it.count ?: JSONObject.NULL).put("splitOnly", it.splitOnly) } ?: JSONObject.NULL)
             .put("transcripts", JSONArray(i.transcripts.map { t ->
                 JSONObject().put("model", t.modelId).put("language", t.language ?: JSONObject.NULL).put("live", t.live)
                     .put("createdAt", t.createdAt)
@@ -189,7 +192,7 @@ class Library(private val root: File) {
                 status = LibraryItem.Status.valueOf(o.optString("status", "DONE")),
                 improve = o.optJSONObject("improve")?.let { ImproveRequest(it.getString("model"), it.optBoolean("whileCharging", true), it.optStringOrNull("language")) },
                 speakers = o.optJSONObject("speakers")?.let(::speakersFromJson),
-                findSpeakers = o.optJSONObject("findSpeakers")?.let { SpeakersRequest(it.optIntOrNull("count")) },
+                findSpeakers = o.optJSONObject("findSpeakers")?.let { SpeakersRequest(it.optIntOrNull("count"), it.optBoolean("splitOnly")) },
             )
         }
 

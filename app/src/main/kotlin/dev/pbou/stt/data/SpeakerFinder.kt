@@ -47,6 +47,12 @@ class SpeakerFinder(private val context: Context, private val library: Library) 
         enqueue(itemId, delayMinutes = 0)
     }
 
+    /** A new version of [itemId] (transcribed again): split its sentences by the speakers already found. */
+    suspend fun requestSplit(itemId: String) {
+        library.update(itemId) { it.copy(findSpeakers = it.findSpeakers ?: SpeakersRequest(it.speakers?.count, splitOnly = true)) } ?: return
+        enqueue(itemId, delayMinutes = 0)
+    }
+
     suspend fun cancel(itemId: String) {
         work.cancelUniqueWork(name(itemId))
         library.update(itemId) { it.copy(findSpeakers = null) }
@@ -117,21 +123,29 @@ class SpeakerWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             val settings = graph.awaitSettings()
             var lastPercent = -1
             finder.report(id, 0f)
-            try {
-                val found = graph.diarizer.run(audio, request.count, settings.effectiveThreads) { doneMs ->
-                    val total = item.durationMs.takeIf { it > 0 } ?: return@run
-                    val fraction = (doneMs.toFloat() / total).coerceIn(0f, 1f)
-                    finder.report(id, fraction)
-                    val percent = (fraction * 100).toInt()
-                    if (percent != lastPercent) {
-                        lastPercent = percent
-                        runCatching { setForegroundAsync(foregroundInfo(item, percent)) }
-                    }
+            fun progress(fraction: Float) {
+                finder.report(id, fraction)
+                val percent = (fraction * 100).toInt()
+                if (percent != lastPercent) {
+                    lastPercent = percent
+                    runCatching { setForegroundAsync(foregroundInfo(item, percent)) }
                 }
-                val result = toSpeakers(found, request.count, previous = graph.library.get(id)?.speakers)
+            }
+            try {
+                // Finding who speaks is most of the work; splitting the sentences they share, the rest.
+                val findShare = if (request.splitOnly && item.speakers != null) 0f else FIND_SHARE
+                if (findShare > 0f) {
+                    val found = graph.diarizer.run(audio, request.count, settings.effectiveThreads) { doneMs ->
+                        val total = item.durationMs.takeIf { it > 0 } ?: return@run
+                        progress((doneMs.toFloat() / total).coerceIn(0f, 1f) * findShare)
+                    }
+                    val result = toSpeakers(found, request.count, previous = graph.library.get(id)?.speakers)
+                    graph.library.update(id) { it.copy(speakers = result) }
+                }
+                SentenceSplit.run(graph, id, audio) { progress(findShare + it * (1 - findShare)) }
                 graph.library.update(id) {
                     // Asked again meanwhile (another count): keep that request for later.
-                    it.copy(speakers = result, findSpeakers = it.findSpeakers?.takeIf { r -> r != request })
+                    it.copy(findSpeakers = it.findSpeakers?.takeIf { r -> r != request })
                 }
                 Result.success()
             } catch (e: CancellationException) {
@@ -195,5 +209,7 @@ class SpeakerWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         private const val CHANNEL = "speakers"
         private const val NOTIFICATION_ID = 44
         private const val MAX_ATTEMPTS = 3
+        /** Share of the progress bar for finding the speakers; the rest is for splitting sentences. */
+        private const val FIND_SHARE = 0.8f
     }
 }

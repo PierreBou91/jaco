@@ -139,12 +139,14 @@ class ImproveWorker(context: Context, params: WorkerParameters) : CoroutineWorke
                     }
                 })
                 val result = Transcript(spec.id, options.language, live = false, System.currentTimeMillis(), synchronized(segments) { segments.toList() })
-                graph.library.update(id) {
+                val saved = graph.library.update(id) {
                     // A newer request (another model) replaced this one meanwhile: keep it for later.
                     val keep = it.improve?.takeIf { r -> r != request }
                     val others = it.transcripts.withoutOlder(spec.id)
                     it.copy(transcripts = others + result, shown = others.size, improve = keep)
                 }
+                // The speakers are known: split the new version's sentences that several people share.
+                if (saved?.speakers != null) graph.speakerFinder.requestSplit(id)
                 Result.success()
             } catch (e: CancellationException) {
                 throw e

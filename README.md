@@ -46,8 +46,8 @@ Status: prototype, sideloaded. Grew out of the STT spike in `hub-spikes` (branch
   again with another model and language, "Improve while charging" (a bigger model such as Cohere redoes it when
   plugged in; the live version stays one tap away), delete the audio but keep the text, rename, delete.
 - **Speakers** (M4): after a recording (or a file with its audio), Jaco finds who spoke when, in the
-  background (about 9 minutes per hour of audio on a Galaxy Z Flip6). Sentences get the speaker's name and
-  color, with each person's share of the talk on top; copy and share name the speakers. Tap a speaker to name
+  background (about 9 to 20 minutes per hour of audio on a Galaxy Z Flip6). A sentence several people speak in
+  is cut where the voice changes and transcribed again. Sentences get the speaker's name and color, with each person's share of the talk on top; copy and share name the speakers. Tap a speaker to name
   them: a name already used in the recording merges the two, and "Remember this voice" saves it, so Jaco
   recognises them in the next recordings (Settings, Saved voices; stored on the phone only). "Find speakers
   again" can be told how many people there are. Models: pyannote segmentation 3.0 and TitaNet small (42 MB,

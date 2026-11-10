@@ -73,4 +73,26 @@ class SpeakerTextTest {
         // One speaker: the usual text.
         assertEquals(LibraryText.plain(segs), SpeakerText.plain(segs, listOf(0, 0, 0, 0, 0), names))
     }
+
+    private fun turn(a: Long, b: Long, k: Int) = Speakers.Turn(a, b, k)
+
+    @Test fun `a sentence of one person is not cut`() {
+        assertEquals(null, SpeakerText.cuts(Segment(0, 10_000, "x"), listOf(turn(0, 4_000, 0), turn(4_500, 10_000, 0))))
+        assertEquals(null, SpeakerText.cuts(Segment(0, 10_000, "x"), listOf(turn(0, 10_000, 1), turn(20_000, 30_000, 0))))
+    }
+
+    @Test fun `a reply inside the sentence is cut out, in the middle of the gaps`() = assertEquals(
+        listOf(0L to 4_250L, 4_250L to 7_100L, 7_100L to 12_000L),
+        SpeakerText.cuts(Segment(0, 12_000, "x"), listOf(turn(0, 4_000, 0), turn(4_500, 7_000, 1), turn(7_200, 12_000, 0))),
+    )
+
+    @Test fun `a short yes stays in the other person's piece`() = assertEquals(
+        null,
+        SpeakerText.cuts(Segment(0, 10_000, "x"), listOf(turn(0, 5_000, 0), turn(5_100, 5_600, 1), turn(5_700, 10_000, 0))),
+    )
+
+    @Test fun `overlapping voices keep the one already speaking`() = assertEquals(
+        listOf(0L to 6_000L, 6_000L to 9_000L),
+        SpeakerText.cuts(Segment(0, 9_000, "x"), listOf(turn(0, 6_000, 0), turn(5_000, 9_000, 1))),
+    )
 }

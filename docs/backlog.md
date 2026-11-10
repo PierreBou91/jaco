@@ -43,9 +43,21 @@ Correcting a wrong word today means switching keyboards. To design together with
   live words on the home screen with real speech (the test room was silent); a file transcribed with "Keep
   the audio" on; dictating with the keyboard while a session records (both share the microphone).
 - **Speakers, first version** (M4, 2026-11-10). Not done yet:
-  - a sentence spoken by two people (no pause between them) goes to the main one; it could be split at the
-    change of speaker with the models that give word times (Parakeet);
+  - a sentence spoken by two people is now cut where the voice changes and the pieces transcribed again
+    (2026-11-11, see "Splitting sentences by word times" below for the faster way);
   - the saved-voice threshold rests on a small sample (12 people pairs): check it on real recordings;
   - the eight speaker colors repeat from the ninth speaker on;
   - the home screen's Copy stays plain text, without speaker names;
   - not checked on a phone: the download waiting for Wi-Fi, and a file transcribed with its audio.
+
+## Splitting sentences by word times (speed-up of the speaker split)
+
+Today a sentence that several people speak in is cut at the change of voice and each piece is transcribed
+again (`SentenceSplit`): it works with every model, for existing recordings too, but costs a new
+transcription of those pieces (about 3 minutes for a 68 minute call with Parakeet on the Galaxy Z Flip6,
+more with Cohere). Faster, for new recordings: keep each word's time while transcribing (sherpa-onnx gives
+token timestamps for transducer models such as Parakeet; to check for Cohere, Canary and Whisper), store them
+with the segments, and split the text at the word nearest the change of voice, with no new transcription.
+Costs: a bigger `item.json` (a time per word), a fallback to the current way for models without times, and
+care at the cut (a word straddling the change). Worth it if the split ever feels slow, or to split live
+versions as they are recorded.

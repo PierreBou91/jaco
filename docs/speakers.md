@@ -86,6 +86,18 @@ real/found: before 12/8, 10/7, 15/7, 15/1, 11/7, 21/18; now 12/8, 10/7, 15/8, 15
 Settings in the app: `SpeakerModels` (`CHUNK_THRESHOLD = 0.7`, `LINK_DISTANCE = 0.5`) and `Diarizer`
 (`CHUNK_S = 300`, `VOICE_S = 30`, `MIN_PIECE_S = 5`).
 
+## Sentences shared by several people (2026-11-11)
+
+A sentence ends after 0.8 s of silence. On calls with quick replies that pause rarely comes: in Pierre's five
+calls the typical sentence lasted 6 to 17 s, and 9% to 36% of the speech was in sentences where a second
+person spoke at least a fifth of the time, all of it given to one person.
+
+Now, once the speakers are found, each such sentence is cut in the middle of the gap between two voices
+(`SpeakerText.cuts`: pieces of at least 1 s, so a quick "yes" stays inside), and each piece is transcribed
+again with its version's model and language (`SentenceSplit`). On the 68 minute call (Parakeet): 258
+sentences became 365, mixed speech went from 36% to 2%, in about 3 minutes on the Flip. Versions made later
+(transcribe again, improve while charging) are split the same way. A faster way, for later: docs/backlog.md.
+
 ## Other systems
 
 - pyannote Community-1 (CC-BY-4.0, no speaker limit, VBx clustering with PLDA): the candidate left; not

@@ -113,7 +113,7 @@ fun SpeakerSummary(speakers: Speakers, names: List<String>, who: List<Int?>, onN
 
 /** "Finding speakers" with its progress, or why it waits (the speaker models are on their way). */
 @Composable
-fun FindingSpeakers(progress: Float?, models: DownloadState?, onCancel: () -> Unit) {
+fun FindingSpeakers(progress: Float?, models: DownloadState?, splitOnly: Boolean, onCancel: () -> Unit) {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -121,6 +121,7 @@ fun FindingSpeakers(progress: Float?, models: DownloadState?, onCancel: () -> Un
             Spacer(Modifier.width(8.dp))
             Text(
                 when {
+                    progress != null && splitOnly -> stringResource(R.string.speakers_splitting, (progress * 100).toInt())
                     progress != null -> stringResource(R.string.speakers_finding, (progress * 100).toInt())
                     models is DownloadState.Waiting && models.forWifi -> stringResource(R.string.speakers_wait_wifi, Format.bytes(context, SpeakerModels.downloadBytes))
                     models is DownloadState.Running -> stringResource(R.string.speakers_downloading, (models.done * 100 / models.total.coerceAtLeast(1)).toInt())

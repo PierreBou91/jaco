@@ -195,7 +195,7 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
                     onCancelImprove = vm::cancelImprove,
                 )
                 if (item.findSpeakers != null && recording == null) {
-                    FindingSpeakers(ui.findingSpeakers, ui.speakerModels, onCancel = vm::cancelSpeakers)
+                    FindingSpeakers(ui.findingSpeakers, ui.speakerModels, splitOnly = item.findSpeakers?.splitOnly == true, onCancel = vm::cancelSpeakers)
                 }
                 if (showSpeakers && speakers != null) {
                     SpeakerSummary(speakers, names, who, onName = { naming = it })

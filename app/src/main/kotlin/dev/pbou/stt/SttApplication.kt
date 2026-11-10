@@ -93,7 +93,11 @@ class AppGraph(app: Application) {
                 recorder.itemId.first { it == null }
             }
         },
-        onDone = { id -> library.get(id)?.takeIf { it.speakers == null }?.let { autoSpeakers(it) } },
+        onDone = { id ->
+            val item = library.get(id)
+            // A new file: find its speakers. Transcribed again: split the new version by the speakers known.
+            if (item?.speakers == null) item?.let { autoSpeakers(it) } else if (item.audio != null) speakerFinder.requestSplit(id)
+        },
     )
 
     /** Asks the UI to show a library item (from the recording notification). */

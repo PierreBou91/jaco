@@ -109,6 +109,43 @@ object AudioDecoder {
 
     private fun MediaFormat.getIntegerOrNull(key: String) = if (containsKey(key)) getInteger(key) else null
 
+    /**
+     * Decodes [file] once and hands over the audio of each range in [rangesMs] (start, end in
+     * milliseconds) as 16 kHz mono, as soon as it is decoded, with its index in [rangesMs]. Only the ranges
+     * are held in memory, so pieces of a long recording can be taken out cheaply.
+     */
+    suspend fun slices(file: File, rangesMs: List<Pair<Long, Long>>, onSlice: suspend (index: Int, samples: FloatArray) -> Unit) {
+        val order = rangesMs.indices.sortedBy { rangesMs[it].first }
+        val starts = LongArray(order.size) { rangesMs[order[it]].first * SAMPLE_RATE / 1000 }
+        val ends = LongArray(order.size) { maxOf(starts[it], rangesMs[order[it]].second * SAMPLE_RATE / 1000) }
+        val buffers = HashMap<Int, FloatArray>()
+        var next = 0
+        var pos = 0L
+        decode(file) { chunk ->
+            val chunkEnd = pos + chunk.size
+            while (next < order.size && starts[next] < chunkEnd) {
+                buffers[next] = FloatArray((ends[next] - starts[next]).toInt())
+                next++
+            }
+            for (k in buffers.keys.sorted()) {
+                val buf = buffers.getValue(k)
+                val from = maxOf(starts[k], pos)
+                val to = minOf(ends[k], chunkEnd)
+                if (to > from) chunk.copyInto(buf, (from - starts[k]).toInt(), (from - pos).toInt(), (to - pos).toInt())
+                if (ends[k] <= chunkEnd) {
+                    buffers.remove(k)
+                    onSlice(order[k], buf)
+                }
+            }
+            pos = chunkEnd
+        }
+        // Ranges running past the end of the audio: what there is.
+        for (k in buffers.keys.sorted()) {
+            val have = (pos - starts[k]).coerceIn(0, ends[k] - starts[k]).toInt()
+            onSlice(order[k], buffers.getValue(k).copyOf(have))
+        }
+    }
+
     private const val TIMEOUT_US = 10_000L
 }
 

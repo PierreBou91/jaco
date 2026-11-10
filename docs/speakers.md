@@ -45,8 +45,53 @@ about 38%, because short bits took places meant for real people.)
 Chunks do better than the whole file here: within 5 minutes the segmentation's clustering has fewer voices
 to separate, and the voice of each chunk speaker is computed from up to 30 s of their speech.
 
-Settings in the app: `SpeakerModels` (`CHUNK_THRESHOLD = 1.0`, `LINK_DISTANCE = 0.45`) and `Diarizer`
+These first settings (`CHUNK_THRESHOLD = 1.0`, `LINK_DISTANCE = 0.45`) were replaced on 2026-11-10, see
+below.
+
+## Many speakers (2026-11-10)
+
+Pierre's meetings have up to 12 people, and AMI has only 4. Second test set: 9 VoxConverse test recordings
+(TV debates and news, YouTube, CC-BY-4.0, labels v0.3, taken from the `diarizers-community/voxconverse` copy)
+with 2, 2, 8, 10, 11, 12, 15, 15 and 21 speakers, 124 minutes, plus the same 4 AMI meetings: 3 hours in all.
+Same scoring (collar 0.25 s). Scripts: `bench.py` (PC) and the `SpeakersBenchmark` instrumented test (phone).
+
+Bigger voice models, same pipeline, each at its best match distance:
+
+| Voice model | Size | AMI | VoxConverse | Flip, minutes per hour of audio |
+|---|---|---|---|---|
+| TitaNet small (in use) | 40 MB | 23.9% | 15.9% | 20 |
+| TitaNet large | 101 MB | 26.5% | 13.4% | 54 |
+| 3D-Speaker ERes2NetV2 (zh-cn) | 71 MB | 39.8% | 27.0% | not measured |
+| WeSpeaker ResNet293 | 114 MB | stopped: over an hour of PC time for 3 hours of audio, far too slow for a phone | | |
+
+(Flip: 20 minute show with 12 speakers, 4 threads. Dense speech costs more than a call: about 9 minutes
+per hour on Pierre's 37 minute call.)
+
+The voice model was not the problem: all of them found far too few people on the big shows (2 found for 15).
+The grouping was. Lower thresholds inside a chunk (sherpa-onnx's clustering keeps more voices apart),
+TitaNet small:
+
+| Chunk threshold, match distance | AMI | VoxConverse | VoxConverse, told the count |
+|---|---|---|---|
+| 1.0, 0.45 (before) | 23.9% | 15.9% | 33.3% |
+| 0.8, 0.5 | 24.7% | 10.5% | |
+| **0.7, 0.5 (in use)** | 24.8% | **9.6%** | 13.7% |
+| 0.6, 0.5 | 28.1% | 9.0% | 11.4% |
+| 0.5, 0.5 | 28.2% | 8.9% | 10.5% |
+
+Below 0.7, meetings get split into too many people (7 to 11 found for 4). Speakers found on the big shows,
+real/found: before 12/8, 10/7, 15/7, 15/1, 11/7, 21/18; now 12/8, 10/7, 15/8, 15/6, 11/10, 21/20. The
+5 s minimum per chunk (`MIN_PIECE_S`) still does best: 0 and 2 s were tried. Same speed: only thresholds.
+
+Settings in the app: `SpeakerModels` (`CHUNK_THRESHOLD = 0.7`, `LINK_DISTANCE = 0.5`) and `Diarizer`
 (`CHUNK_S = 300`, `VOICE_S = 30`, `MIN_PIECE_S = 5`).
+
+## Other systems
+
+- pyannote Community-1 (CC-BY-4.0, no speaker limit, VBx clustering with PLDA): the candidate left; not
+  measured yet (its files are gated on Hugging Face). Bringing it to the phone means writing VBx in Kotlin.
+- DiariZen (BUT): weights CC-BY-NC-4.0, Reverb (Rev): non-production licence. Not allowed in a free app.
+- NVIDIA Sortformer: 4 speakers at most.
 
 ## On the phone
 

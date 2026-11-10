@@ -31,10 +31,10 @@ object SpeakerModels : Installable {
     val embeddingLicense = License.CC_BY_4
 
     /** Clustering threshold inside a chunk (sherpa-onnx's own clustering, its scale). */
-    const val CHUNK_THRESHOLD = 1.0f
+    const val CHUNK_THRESHOLD = 0.7f
 
     /** Cosine distance under which two chunks' voices are the same person. */
-    const val LINK_DISTANCE = 0.45f
+    const val LINK_DISTANCE = 0.5f
 
     /** Cosine similarity from which a person is recognised as a saved voice (stricter: a wrong name is worse than none). */
     const val MATCH_SIMILARITY = 0.65f

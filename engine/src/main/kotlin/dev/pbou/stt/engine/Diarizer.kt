@@ -31,22 +31,31 @@ class Diarizer(private val store: ModelStore) {
 
     data class Result(val turns: List<Turn>, val speakers: List<Speaker>)
 
+    /** Which models and thresholds to use: the installed [SpeakerModels], or others to compare (benchmarks). */
+    data class Setup(val segmentation: File, val embedding: File, val chunkThreshold: Float, val linkDistance: Float)
+
+    fun installed() = Setup(
+        segmentation = File(store.dir(SpeakerModels), SpeakerModels.SEGMENTATION),
+        embedding = File(store.dir(SpeakerModels), SpeakerModels.EMBEDDING),
+        chunkThreshold = SpeakerModels.CHUNK_THRESHOLD,
+        linkDistance = SpeakerModels.LINK_DISTANCE,
+    )
+
     /**
      * Diarizes [file]. [count]: the number of speakers if known, null to find it. [onProgress] gets the
      * milliseconds of audio done. Throws [UnsupportedAudioException] if the audio cannot be decoded.
      */
-    suspend fun run(file: File, count: Int?, threads: Int, onProgress: (Long) -> Unit): Result = withContext(Dispatchers.Default) {
-        val dir = store.dir(SpeakerModels)
+    suspend fun run(file: File, count: Int?, threads: Int, setup: Setup = installed(), onProgress: (Long) -> Unit): Result = withContext(Dispatchers.Default) {
         val segmentation = OfflineSpeakerSegmentationModelConfig(
-            pyannote = OfflineSpeakerSegmentationPyannoteModelConfig(model = File(dir, SpeakerModels.SEGMENTATION).path),
+            pyannote = OfflineSpeakerSegmentationPyannoteModelConfig(model = setup.segmentation.path),
             numThreads = threads,
         )
-        val embedding = SpeakerEmbeddingExtractorConfig(model = File(dir, SpeakerModels.EMBEDDING).path, numThreads = threads)
+        val embedding = SpeakerEmbeddingExtractorConfig(model = setup.embedding.path, numThreads = threads)
         val sd = OfflineSpeakerDiarization(
             config = OfflineSpeakerDiarizationConfig(
                 segmentation = segmentation,
                 embedding = embedding,
-                clustering = FastClusteringConfig(numClusters = -1, threshold = SpeakerModels.CHUNK_THRESHOLD),
+                clustering = FastClusteringConfig(numClusters = -1, threshold = setup.chunkThreshold),
                 minDurationOn = 0.3f,
                 minDurationOff = 0.5f,
             ),
@@ -75,7 +84,7 @@ class Diarizer(private val store: ModelStore) {
                 }
             }
             flush()
-            group(pieces, count)
+            group(pieces, count, setup.linkDistance)
         } finally {
             extractor.release()
             sd.release()
@@ -121,10 +130,10 @@ class Diarizer(private val store: ModelStore) {
      * grouped (short bits of speech give unreliable voices, and with a known count they would take places
      * meant for real people); the short ones then join the closest person.
      */
-    private fun group(pieces: List<Piece>, count: Int?): Result {
+    private fun group(pieces: List<Piece>, count: Int?, linkDistance: Float): Result {
         if (pieces.isEmpty()) return Result(emptyList(), emptyList())
         val main = pieces.indices.filter { pieces[it].seconds >= MIN_PIECE_S }.ifEmpty { pieces.indices.toList() }
-        val mainLabel = VoiceMath.cluster(main.map { pieces[it].voice }, SpeakerModels.LINK_DISTANCE, count)
+        val mainLabel = VoiceMath.cluster(main.map { pieces[it].voice }, linkDistance, count)
         val groups = mainLabel.max() + 1
         val centroids = (0 until groups).map { g ->
             VoiceMath.mean(main.filterIndexed { k, _ -> mainLabel[k] == g }.map { pieces[it].voice })

@@ -211,6 +211,7 @@ fun ItemScreen(vm: ItemViewModel, onBack: () -> Unit) {
                         when {
                             recording != null -> R.string.rec_hint
                             item.status != LibraryItem.Status.DONE -> R.string.lib_transcribing
+                            item.kind == LibraryItem.Kind.RECORDING -> R.string.rec_no_speech
                             else -> R.string.file_no_speech
                         },
                     ),

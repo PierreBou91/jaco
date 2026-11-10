@@ -219,6 +219,7 @@
     <string name="file_done_seconds">Transcribed in %1$d s</string>
     <string name="file_done_minutes">Transcribed in %1$d min %2$d s</string>
     <string name="file_no_speech">No speech found in this file.</string>
+    <string name="rec_no_speech">No speech found in this recording.</string>
     <string name="file_unreadable">This file could not be read. Voice notes, MP3, M4A, WAV, OGG and Opus files work, as well as most videos.</string>
     <string name="file_no_model">Download a model first.</string>
     <string name="file_engine_error">The model stopped with an error.</string>
